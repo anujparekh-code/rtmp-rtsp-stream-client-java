@@ -650,7 +650,7 @@ public abstract class Camera1Base
             streaming = false;
             stopStreamRtp();
         }
-        if (!recordController.isRecording()) {
+        if (!recordController.isRecording() && !recordController.isRecording2()) {
             if (audioInitialized) microphoneManager.stop();
             if (glInterface != null && Build.VERSION.SDK_INT >= 18) {
                 glInterface.removeMediaCodecSurface();
@@ -925,4 +925,57 @@ public abstract class Camera1Base
     public abstract void setLogs(boolean enable);
 
     public abstract void setCheckServerAlive(boolean enable);
+
+    /**
+     * Starts recording an MP4 video. Needs to be called while streaming.
+     *
+     * @param path Where file will be saved.
+     * @throws IOException If initialized before a stream.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public void startRecord2(@NonNull final String path, @Nullable RecordController.Listener listener)
+            throws IOException {
+        recordController.startRecord2(path, listener);
+        if (!streaming) {
+            startEncoders();
+        } else if (videoEncoder.isRunning()) {
+            requestKeyFrame();
+        }
+    }
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public void startRecord2(@NonNull final String path) throws IOException {
+        startRecord2(path, null);
+    }
+
+    /**
+     * Stop record MP4 video started with @startRecord. If you don't call it file will be unreadable.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public void stopRecord2() {
+        recordController.stopRecord2();
+        if (!streaming) stopStream();
+    }
+
+    public void setZoomIn() {
+        cameraManager.setZoomIn();
+    }
+    public void setZoomOut() {
+        cameraManager.setZoomOut();
+    }
+
+    /**
+     * Get record state.
+     *
+     * @return true if recording, false if not recoding.
+     */
+    public boolean isRecording2() {
+        return recordController.isRunning2();
+    }
+
+    public String getVideoFilePath() {
+        return recordController.getVideoFilePath();
+    }
+    public String getVideoFilePath2() {
+        return recordController.getVideoFilePath2();
+    }
 }
