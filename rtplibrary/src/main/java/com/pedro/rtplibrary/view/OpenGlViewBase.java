@@ -17,6 +17,7 @@
 package com.pedro.rtplibrary.view;
 
 import android.content.Context;
+import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
@@ -168,7 +169,10 @@ public abstract class OpenGlViewBase extends SurfaceView
     this.encoderWidth = width;
     this.encoderHeight = height;
   }
-
+  @Override
+  public Point getEncoderSize() {
+    return new Point(encoderWidth, encoderHeight);
+  }
   @Override
   public void start() {
     synchronized (sync) {

@@ -18,6 +18,7 @@ package com.pedro.rtplibrary.view;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -72,6 +73,11 @@ public class OpenGlView extends OpenGlViewBase {
     if (!initialized) managerRender = new ManagerRender();
     managerRender.setCameraFlip(isFlipHorizontal, isFlipVertical);
     initialized = true;
+  }
+
+  @Override
+  public Point getEncoderSize() {
+    return null;
   }
 
   @Override
