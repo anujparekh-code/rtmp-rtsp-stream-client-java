@@ -32,10 +32,8 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.pedro.encoder.input.gl.SpriteGestureController;
 import com.pedro.encoder.input.gl.render.filters.AnalogTVFilterRender;
 import com.pedro.encoder.input.gl.render.filters.AndroidViewFilterRender;
@@ -165,7 +163,6 @@ public class OpenGlRtmpActivity extends AppCompatActivity
             case R.id.android_view:
                 AndroidViewFilterRender androidViewFilterRender = new AndroidViewFilterRender();
                 androidViewFilterRender.setView(findViewById(R.id.switch_camera));
-                androidViewFilterRender.setPosition(TranslateTo.BOTTOM);
                 rtmpCamera1.getGlInterface().setFilter(androidViewFilterRender);
                 return true;
             case R.id.basic_deformation:
@@ -331,9 +328,9 @@ public class OpenGlRtmpActivity extends AppCompatActivity
                 BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
         imageObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(),
                 rtmpCamera1.getStreamHeight());
-        imageObjectFilterRender.setPosition(TranslateTo.CENTER);
+        imageObjectFilterRender.setPosition(TranslateTo.RIGHT);
         spriteGestureController.setBaseObjectFilterRender(imageObjectFilterRender); //Optional
-//        spriteGestureController.setPreventMoveOutside(false); //Optional
+        spriteGestureController.setPreventMoveOutside(false); //Optional
     }
 
     private void setGifToStream() {

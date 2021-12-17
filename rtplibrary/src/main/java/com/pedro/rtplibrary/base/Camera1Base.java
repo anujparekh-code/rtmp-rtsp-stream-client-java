@@ -17,6 +17,7 @@
 package com.pedro.rtplibrary.base;
 
 import android.content.Context;
+import android.graphics.Point;
 import android.hardware.Camera;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
@@ -266,7 +267,7 @@ public abstract class Camera1Base
      */
     public boolean prepareVideo(int width, int height, int fps, int bitrate, int iFrameInterval,
                                 int rotation, int avcProfile, int avcProfileLevel) {
-        if (onPreview && width != previewWidth || height != previewHeight) {
+        if (onPreview && width != previewWidth || height != previewHeight || fps != videoEncoder.getFps()) {
             stopPreview();
             onPreview = true;
         }
@@ -376,31 +377,9 @@ public abstract class Camera1Base
         }
     }
 
-    /**
-     * Starts recording an MP4 video. Needs to be called while streaming.
-     *
-     * @param path Where file will be saved.
-     * @throws IOException If initialized before a stream.
-     */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public void startRecord2(@NonNull final String path, @Nullable RecordController.Listener listener)
-            throws IOException {
-        recordController.startRecord2(path, listener);
-        if (!streaming) {
-            startEncoders();
-        } else if (videoEncoder.isRunning()) {
-            requestKeyFrame();
-        }
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void startRecord(@NonNull final String path) throws IOException {
         startRecord(path, null);
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public void startRecord2(@NonNull final String path) throws IOException {
-        startRecord2(path, null);
     }
 
     /**
@@ -434,15 +413,6 @@ public abstract class Camera1Base
         if (!streaming) stopStream();
     }
 
-    /**
-     * Stop record MP4 video started with @startRecord. If you don't call it file will be unreadable.
-     */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public void stopRecord2() {
-        recordController.stopRecord2();
-        if (!streaming) stopStream();
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void replaceView(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
@@ -467,17 +437,13 @@ public abstract class Camera1Base
     private void replaceGlInterface(GlInterface glInterface) {
         if (this.glInterface != null && Build.VERSION.SDK_INT >= 18) {
             if (isStreaming() || isRecording() || isOnPreview()) {
+                Point size = this.glInterface.getEncoderSize();
                 cameraManager.stop();
                 this.glInterface.removeMediaCodecSurface();
                 this.glInterface.stop();
                 this.glInterface = glInterface;
                 this.glInterface.init();
-                boolean isPortrait = CameraHelper.isPortrait(context);
-                if (isPortrait) {
-                    this.glInterface.setEncoderSize(videoEncoder.getHeight(), videoEncoder.getWidth());
-                } else {
-                    this.glInterface.setEncoderSize(videoEncoder.getWidth(), videoEncoder.getHeight());
-                }
+                this.glInterface.setEncoderSize(size.x, size.y);
                 this.glInterface.setRotation(0);
                 this.glInterface.start();
                 if (isStreaming() || isRecording()) {
@@ -591,14 +557,6 @@ public abstract class Camera1Base
         cameraManager.setZoom(event);
     }
 
-    public void setZoomIn() {
-        cameraManager.setZoomIn();
-    }
-
-    public void setZoomOut() {
-        cameraManager.setZoomOut();
-    }
-
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void startStreamAndRecord(String url, String path, RecordController.Listener listener) throws IOException {
         startStream(url);
@@ -646,16 +604,18 @@ public abstract class Camera1Base
         onPreview = true;
     }
 
-    protected void requestKeyFrame() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            videoEncoder.requestKeyframe();
-        } else {
-            if (glInterface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                glInterface.removeMediaCodecSurface();
-            }
-            videoEncoder.reset();
-            if (glInterface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
+    public void requestKeyFrame() {
+        if (videoEncoder.isRunning()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                videoEncoder.requestKeyframe();
+            } else {
+                if (glInterface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                    glInterface.removeMediaCodecSurface();
+                }
+                videoEncoder.reset();
+                if (glInterface != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                    glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
+                }
             }
         }
     }
@@ -690,7 +650,7 @@ public abstract class Camera1Base
             streaming = false;
             stopStreamRtp();
         }
-        if (!recordController.isRecording() && !recordController.isRecording2()) {
+        if (!recordController.isRecording()) {
             if (audioInitialized) microphoneManager.stop();
             if (glInterface != null && Build.VERSION.SDK_INT >= 18) {
                 glInterface.removeMediaCodecSurface();
@@ -902,15 +862,6 @@ public abstract class Camera1Base
         return recordController.isRunning();
     }
 
-    /**
-     * Get record state.
-     *
-     * @return true if recording, false if not recoding.
-     */
-    public boolean isRecording2() {
-        return recordController.isRunning2();
-    }
-
     public void pauseRecord() {
         recordController.pauseRecord();
     }
@@ -974,13 +925,4 @@ public abstract class Camera1Base
     public abstract void setLogs(boolean enable);
 
     public abstract void setCheckServerAlive(boolean enable);
-
-    public String getVideoFilePath() {
-        return recordController.getVideoFilePath();
-    }
-
-    public String getVideoFilePath2() {
-        return recordController.getVideoFilePath2();
-    }
-
 }

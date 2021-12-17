@@ -203,6 +203,8 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
+   * Enable EIS video stabilization
+   * Warning: Turning both OIS and EIS modes on may produce undesirable interaction, so it is recommended not to enable both at the same time.
    * @return true if success, false if fail (not supported or called before start camera)
    */
   public boolean enableVideoStabilization() {
@@ -215,6 +217,23 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
 
   public boolean isVideoStabilizationEnabled() {
     return cameraManager.isVideoStabilizationEnabled();
+  }
+
+  /**
+   * Enable OIS video stabilization
+   * Warning: Turning both OIS and EIS modes on may produce undesirable interaction, so it is recommended not to enable both at the same time.
+   * @return true if success, false if fail (not supported or called before start camera)
+   */
+  public boolean enableOpticalVideoStabilization() {
+    return cameraManager.enableOpticalVideoStabilization();
+  }
+
+  public void disableOpticalVideoStabilization() {
+    cameraManager.disableOpticalVideoStabilization();
+  }
+
+  public boolean isOpticalVideoStabilizationEnabled() {
+    return cameraManager.isOpticalStabilizationEnabled();
   }
 
   /**
@@ -284,7 +303,8 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
    */
   public boolean prepareVideo(int width, int height, int fps, int bitrate, int iFrameInterval,
       int rotation, int avcProfile, int avcProfileLevel) {
-    if (onPreview && !(glInterface != null && width == previewWidth && height == previewHeight)) {
+    if (onPreview && glInterface != null && (width != previewWidth || height != previewHeight
+        || fps != videoEncoder.getFps())) {
       stopPreview();
       onPreview = true;
     }
@@ -486,6 +506,10 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
    * com.pedro.encoder.input.video.CameraHelper#getCameraOrientation(Context)}
    */
   public void startPreview(CameraHelper.Facing cameraFacing, int width, int height, int rotation) {
+    startPreview(cameraManager.getCameraIdForFacing(cameraFacing), width, height, rotation);
+  }
+
+  public void startPreview(String cameraId, int width, int height, int rotation) {
     if (!isStreaming() && !onPreview && !isBackground) {
       previewWidth = width;
       previewHeight = height;
@@ -506,27 +530,42 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
         cameraManager.prepareCamera(glInterface.getSurfaceTexture(), width, height,
             videoEncoder.getFps());
       }
-      cameraManager.openCameraFacing(cameraFacing);
+      cameraManager.openCameraId(cameraId);
       onPreview = true;
     } else if (!isStreaming() && !onPreview && isBackground) {
       // if you are using background mode startPreview only work to indicate
       // that you want start with front or back camera
-      cameraManager.setCameraFacing(cameraFacing);
+      cameraManager.setCameraId(cameraId);
     } else {
       Log.e(TAG, "Streaming or preview started, ignored");
     }
   }
 
   public void startPreview(CameraHelper.Facing cameraFacing, int width, int height) {
-    startPreview(cameraFacing, width, height, CameraHelper.getCameraOrientation(context));
+    startPreview(cameraManager.getCameraIdForFacing(cameraFacing),
+            width, height, CameraHelper.getCameraOrientation(context));
+  }
+
+  public void startPreview(String cameraId, int width, int height) {
+    startPreview(cameraId, width, height, CameraHelper.getCameraOrientation(context));
+  }
+
+  public void startPreview(String cameraId, int rotation) {
+    startPreview(cameraId, videoEncoder.getWidth(), videoEncoder.getHeight(), rotation);
   }
 
   public void startPreview(CameraHelper.Facing cameraFacing, int rotation) {
-    startPreview(cameraFacing, videoEncoder.getWidth(), videoEncoder.getHeight(), rotation);
+    startPreview(cameraManager.getCameraIdForFacing(cameraFacing),
+            videoEncoder.getWidth(), videoEncoder.getHeight(), rotation);
+  }
+
+  public void startPreview(String cameraId) {
+    startPreview(cameraId, videoEncoder.getWidth(), videoEncoder.getHeight());
   }
 
   public void startPreview(CameraHelper.Facing cameraFacing) {
-    startPreview(cameraFacing, videoEncoder.getWidth(), videoEncoder.getHeight());
+    startPreview(cameraManager.getCameraIdForFacing(cameraFacing),
+            videoEncoder.getWidth(), videoEncoder.getHeight());
   }
 
   public void startPreview(int width, int height) {
@@ -724,8 +763,12 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
     return Arrays.asList(cameraManager.getCameraResolutionsFront());
   }
 
-  public Range<Integer>[] getSupportedFps() {
-    return cameraManager.getSupportedFps();
+  public List<Range<Integer>> getSupportedFps() {
+    return cameraManager.getSupportedFps(null, CameraHelper.Facing.BACK);
+  }
+
+  public List<Range<Integer>> getSupportedFps(Size size, CameraHelper.Facing facing) {
+    return cameraManager.getSupportedFps(size, facing);
   }
 
   /**
@@ -761,12 +804,12 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
-   * Return max zoom level
+   * Return zoom level range
    *
-   * @return max zoom level
+   * @return zoom level range
    */
-  public float getMaxZoom() {
-    return cameraManager.getMaxZoom();
+  public Range<Float> getZoomRange() {
+    return cameraManager.getZoomRange();
   }
 
   /**
@@ -798,6 +841,22 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
     cameraManager.setZoom(event);
   }
 
+  /**
+   * @Experimental
+   * @return optical zoom values available
+   */
+  public float[] getOpticalZooms() {
+    return cameraManager.getOpticalZooms();
+  }
+
+  /**
+   * @Experimental
+   * @param level value provided by getOpticalZooms method
+   */
+  public void setOpticalZoom(float level) {
+    cameraManager.setOpticalZoom(level);
+  }
+
   public int getBitrate() {
     return videoEncoder.getBitRate();
   }
@@ -815,6 +874,12 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
+   * @return IDs of cameras available that can be used on startPreview of switchCamera. null If no cameras available
+   */
+  public String[] getCamerasAvailable() {
+    return cameraManager.getCamerasAvailable();
+  }
+  /**
    * Switch camera used. Can be called anytime
    *
    * @throws CameraOpenException If the other camera doesn't support same resolution.
@@ -824,6 +889,20 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
       cameraManager.switchCamera();
     } else {
       cameraManager.setCameraFacing(getCameraFacing() == CameraHelper.Facing.FRONT ? CameraHelper.Facing.BACK : CameraHelper.Facing.FRONT);
+    }
+  }
+
+  /**
+   * Choose a specific camera to use. Can be called anytime.
+   *
+   * @param cameraId Identifier of the camera to use.
+   * @throws CameraOpenException
+   */
+  public void switchCamera(String cameraId) throws CameraOpenException {
+    if (isStreaming() || onPreview) {
+      cameraManager.reOpenCamera(cameraId);
+    } else {
+      cameraManager.setCameraId(cameraId);
     }
   }
 
