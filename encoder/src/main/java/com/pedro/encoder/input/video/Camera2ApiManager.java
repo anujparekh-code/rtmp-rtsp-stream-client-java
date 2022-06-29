@@ -307,6 +307,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     try {
       String cameraId = getCameraIdForFacing(cameraManager, cameraFacing);
       if (cameraId != null) {
+        facing = cameraFacing;
         this.cameraId = cameraId;
       }
     } catch (CameraAccessException e) {
@@ -634,6 +635,11 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
       if (builderInputSurface != null) {
         try {
           if (!focusModesList.isEmpty()) {
+            //cancel any existing AF trigger
+            builderInputSurface.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            builderInputSurface.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            cameraCaptureSession.setRepeatingRequest(builderInputSurface.build(),
+                faceDetectionEnabled ? cb : null, null);
             if (focusModesList.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
               builderInputSurface.set(CaptureRequest.CONTROL_AF_MODE,
                   CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
@@ -914,21 +920,15 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     float currentFingerSpacing;
     if (event.getPointerCount() > 1) {
       currentFingerSpacing = getFingerSpacing(event);
-      Range<Float> zoomRange = getZoomRange();
       float delta = 0.1f;
       if (fingerSpacing != 0) {
         float newLevel = zoomLevel;
-        if (currentFingerSpacing > fingerSpacing) { //Don't over zoom-in
-          if (zoomRange.getUpper() - zoomLevel <= zoomRange.getUpper()) {
-            delta = zoomRange.getUpper() - zoomLevel;
-          }
+        if (currentFingerSpacing > fingerSpacing) {
           newLevel += delta;
-        } else if (currentFingerSpacing < fingerSpacing) { //Don't over zoom-out
-          if (zoomLevel - delta < zoomRange.getLower()) {
-            delta = zoomLevel - zoomRange.getLower();
-          }
+        } else if (currentFingerSpacing < fingerSpacing) {
           newLevel -= delta;
         }
+        //This method avoid out of range
         setZoom(newLevel);
       }
       fingerSpacing = currentFingerSpacing;
@@ -991,6 +991,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     this.cameraDevice = cameraDevice;
     startPreview(cameraDevice);
     semaphore.release();
+    if (cameraCallbacks != null) cameraCallbacks.onCameraOpened();
     Log.i(TAG, "Camera opened");
   }
 
@@ -998,6 +999,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   public void onDisconnected(@NonNull CameraDevice cameraDevice) {
     cameraDevice.close();
     semaphore.release();
+    if (cameraCallbacks != null) cameraCallbacks.onCameraDisconnected();
     Log.i(TAG, "Camera disconnected");
   }
 

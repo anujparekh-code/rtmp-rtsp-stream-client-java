@@ -150,6 +150,7 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
         // MediaFormat.KEY_LEVEL, API > 23
         videoFormat.setInteger("level", this.avcProfileLevel);
       }
+      setCallback();
       codec.configure(videoFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
       running = false;
       if (formatVideoEncoder == FormatVideoEncoder.SURFACE
@@ -275,6 +276,10 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
     this.fps = fps;
   }
 
+  public void setRotation(int rotation) {
+    this.rotation = rotation;
+  }
+
   public int getFps() {
     return fps;
   }
@@ -356,6 +361,7 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
   private Pair<ByteBuffer, ByteBuffer> decodeSpsPpsFromBuffer(ByteBuffer outputBuffer, int length) {
     byte[] csd = new byte[length];
     outputBuffer.get(csd, 0, length);
+    outputBuffer.rewind();
     int i = 0;
     int spsIndex = -1;
     int ppsIndex = -1;
@@ -396,6 +402,7 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
     int length = csd0byteBuffer.remaining();
     byte[] csdArray = new byte[length];
     csd0byteBuffer.get(csdArray, 0, length);
+    csd0byteBuffer.rewind();
     for (int i = 0; i < csdArray.length; i++) {
       if (contBufferInitiation == 3 && csdArray[i] == 1) {
         if (vpsPosition == -1) {
@@ -447,6 +454,11 @@ public class VideoEncoder extends BaseEncoder implements GetCameraData {
         : YUVUtil.NV21toYUV420byColor(buffer, width, height, formatVideoEncoder);
     frame.setBuffer(buffer);
     return frame;
+  }
+
+  @Override
+  protected long calculatePts(Frame frame, long presentTimeUs) {
+    return System.nanoTime() / 1000 - presentTimeUs;
   }
 
   @Override

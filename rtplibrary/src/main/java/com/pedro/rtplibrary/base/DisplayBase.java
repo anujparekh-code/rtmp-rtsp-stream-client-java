@@ -44,8 +44,10 @@ import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
 import com.pedro.encoder.video.GetVideoData;
 import com.pedro.encoder.video.VideoEncoder;
+import com.pedro.rtplibrary.base.recording.BaseRecordController;
+import com.pedro.rtplibrary.base.recording.RecordController;
 import com.pedro.rtplibrary.util.FpsListener;
-import com.pedro.rtplibrary.util.RecordController;
+import com.pedro.rtplibrary.util.AndroidMuxerRecordController;
 import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 
@@ -78,7 +80,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   private int dpi = 320;
   private int resultCode = -1;
   private Intent data;
-  protected RecordController recordController;
+  protected BaseRecordController recordController;
   private final FpsListener fpsListener = new FpsListener();
   private boolean audioInitialized = false;
 
@@ -94,7 +96,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     audioEncoder = new AudioEncoder(this);
     //Necessary use same thread to read input buffer and encode it with internal audio or audio is choppy.
     setMicrophoneMode(MicrophoneMode.SYNC);
-    recordController = new RecordController();
+    recordController = new AndroidMuxerRecordController();
   }
 
   /**
@@ -290,7 +292,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
-   * Starts recording an MP4 video. Needs to be called while streaming.
+   * Starts recording a MP4 video.
    *
    * @param path Where file will be saved.
    * @throws IOException If initialized before a stream.
@@ -310,7 +312,7 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
-   * Starts recording an MP4 video. Needs to be called while streaming.
+   * Starts recording a MP4 video.
    *
    * @param fd Where the file will be saved.
    * @throws IOException If initialized before a stream.
@@ -403,8 +405,10 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
     if (audioInitialized) microphoneManager.start();
   }
 
-  protected void requestKeyFrame() {
-    videoEncoder.requestKeyframe();
+  public void requestKeyFrame() {
+    if (videoEncoder.isRunning()) {
+      videoEncoder.requestKeyframe();
+    }
   }
 
   protected abstract void stopStreamRtp();
@@ -489,21 +493,28 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   }
 
   /**
+   * Set a custom size of audio buffer input.
+   * If you set 0 or less you can disable it to use library default value.
+   * Must be called before of prepareAudio method.
+   *
+   * @param size in bytes. Recommended multiple of 1024 (2048, 4096, 8196, etc)
+   */
+  public void setAudioMaxInputSize(int size) {
+    microphoneManager.setMaxInputSize(size);
+  }
+
+  /**
    * Mute microphone, can be called before, while and after stream.
    */
   public void disableAudio() {
-    if (audioInitialized) {
-      microphoneManager.mute();
-    }
+    microphoneManager.mute();
   }
 
   /**
    * Enable a muted microphone, can be called before, while and after stream.
    */
   public void enableAudio() {
-    if (audioInitialized) {
-      microphoneManager.unMute();
-    }
+    microphoneManager.unMute();
   }
 
   /**
@@ -617,6 +628,10 @@ public abstract class DisplayBase implements GetAacData, GetVideoData, GetMicrop
   @Override
   public void onAudioFormat(MediaFormat mediaFormat) {
     recordController.setAudioFormat(mediaFormat);
+  }
+
+  public void setRecordController(BaseRecordController recordController) {
+    if (!isRecording()) this.recordController = recordController;
   }
 
   public abstract void setLogs(boolean enable);

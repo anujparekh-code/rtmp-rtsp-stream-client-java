@@ -17,6 +17,7 @@
   <string name="opengl_rtsp">OpenGl RTSP</string>
   <string name="service_rtp">Service RTP</string>
   <string name="cube_test_rtmp">Cube test RTMP</string>
+  <string name="rotation_rtmp">Rotation RTMP</string>
 
   <string name="tv_select">Select your streamer</string>
   <string name="hint_rtsp">rtsp://yourendpoint</string>
@@ -103,4 +104,10 @@
   <string name="user">User</string>
   <string name="password">Password</string>
   <string name="noise_suppressor">Noise suppressor</string>
+  <string name="video_source">Video source</string>
+  <string name="audio_source">Audio source</string>
+  <string name="camera1">Camera1</string>
+  <string name="camera2">Camera2</string>
+  <string name="screen">Screen</string>
+  <string name="internal">Internal</string>
 </resources>

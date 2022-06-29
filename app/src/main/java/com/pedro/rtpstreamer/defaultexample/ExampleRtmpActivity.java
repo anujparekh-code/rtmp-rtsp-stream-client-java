@@ -18,9 +18,7 @@ package com.pedro.rtpstreamer.defaultexample;
 
 import android.os.Build;
 import android.os.Bundle;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -28,7 +26,6 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
@@ -62,7 +59,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_example);
-        folder = PathUtils.getRecordPath(this);
+        folder = PathUtils.getRecordPath();
         SurfaceView surfaceView = findViewById(R.id.surfaceView);
         button = findViewById(R.id.b_start_stop);
         button.setOnClickListener(this);
@@ -97,7 +94,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (rtmpCamera1.reTry(5000, reason)) {
+                if (rtmpCamera1.reTry(5000, reason, null)) {
                     Toast.makeText(ExampleRtmpActivity.this, "Retry", Toast.LENGTH_SHORT)
                             .show();
                 } else {
@@ -111,7 +108,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
     }
 
     @Override
-    public void onNewBitrateRtmp(long bitrate) {
+    public void onNewBitrateRtmp(final long bitrate) {
 
     }
 
@@ -131,6 +128,8 @@ public class ExampleRtmpActivity extends AppCompatActivity
             @Override
             public void run() {
                 Toast.makeText(ExampleRtmpActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+                rtmpCamera1.stopStream();
+                button.setText(R.string.start_button);
             }
         });
     }
@@ -197,16 +196,18 @@ public class ExampleRtmpActivity extends AppCompatActivity
                             }
                         } catch (IOException e) {
                             rtmpCamera1.stopRecord();
+                            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
                             bRecord.setText(R.string.start_record);
                             Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         rtmpCamera1.stopRecord();
+                        PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
                         bRecord.setText(R.string.start_record);
                         Toast.makeText(this,
                                 "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
                                 Toast.LENGTH_SHORT).show();
-                        currentDateAndTime = "";
+                        currentDateAndTime="";
                     }
                 } else {
                     Toast.makeText(this, "You need min JELLY_BEAN_MR2(API 18) for do it...",
@@ -232,6 +233,7 @@ public class ExampleRtmpActivity extends AppCompatActivity
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2 && rtmpCamera1.isRecording()) {
             rtmpCamera1.stopRecord();
+            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
             bRecord.setText(R.string.start_record);
             Toast.makeText(this,
                     "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),

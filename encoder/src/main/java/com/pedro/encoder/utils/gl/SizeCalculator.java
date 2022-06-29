@@ -35,6 +35,29 @@ public class SizeCalculator {
     GLES20.glViewport(pair.first.x, pair.first.y, pair.second.x, pair.second.y);
   }
 
+  public static void calculateViewPortEncoder(int streamWidth, int streamHeight, boolean isPortrait) {
+    Pair<Point, Point> pair;
+    float factor = (float) streamWidth / (float) streamHeight;
+    if (factor >= 1f) {
+      if (isPortrait) {
+        int width = (int) (streamHeight / factor);
+        int oX = (streamWidth - width) / 2;
+        pair = new Pair<>(new Point(oX, 0), new Point(width, streamHeight));
+      } else {
+        pair = new Pair<>(new Point(0, 0), new Point(streamWidth, streamHeight));
+      }
+    } else {
+      if (isPortrait) {
+        pair = new Pair<>(new Point(0, 0), new Point(streamWidth, streamHeight));
+      } else {
+        int height = (int) (streamWidth * factor);
+        int oY = (streamHeight - height) / 2;
+        pair = new Pair<>(new Point(0, oY), new Point(streamWidth, height));
+      }
+    }
+    GLES20.glViewport(pair.first.x, pair.first.y, pair.second.x, pair.second.y);
+  }
+
   public static Pair<Point, Point> getViewport(boolean keepAspectRatio, int mode, int previewWidth,
       int previewHeight, int streamWidth, int streamHeight) {
     if (keepAspectRatio) {
@@ -50,7 +73,7 @@ public class SizeCalculator {
           && previewAspectRatio < 1
           && streamAspectRatio > previewAspectRatio) || (streamAspectRatio > 1f
           && previewAspectRatio < 1f)) {
-        if (mode == 0 || mode == 2) {
+        if (mode == 0) {
           yf = streamHeight * previewWidth / streamWidth;
           yo = (yf - previewHeight) / -2;
         } else {
@@ -77,16 +100,9 @@ public class SizeCalculator {
     }
   }
 
-  public static void processMatrix(int rotation, int width, int height, boolean isPreview,
-      boolean isPortrait, boolean flipStreamHorizontal, boolean flipStreamVertical, int mode,
-      float[] MVPMatrix) {
-    PointF scale;
-    if (mode == 2 || mode == 3) { // stream rotation is enabled
-      scale = getScale(rotation, width, height, isPortrait, isPreview);
-      if (!isPreview && !isPortrait) rotation += 90;
-    } else {
-      scale = new PointF(1f, 1f);
-    }
+  public static void processMatrix(int rotation, boolean flipStreamHorizontal,
+      boolean flipStreamVertical, float[] MVPMatrix) {
+    PointF scale = new PointF(1f, 1f);
 
     float xFlip = flipStreamHorizontal ? -1f : 1f;
     float yFlip = flipStreamVertical ? -1f : 1f;

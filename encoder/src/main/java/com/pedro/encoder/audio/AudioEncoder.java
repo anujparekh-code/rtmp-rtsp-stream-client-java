@@ -43,6 +43,8 @@ public class AudioEncoder extends BaseEncoder implements GetMicrophoneData {
   private int maxInputSize = 0;
   private boolean isStereo = true;
   private GetFrame getFrame;
+  private long bytesRead = 0;
+  private boolean tsModeBuffer = false;
 
   public AudioEncoder(GetAacData getAacData) {
     this.getAacData = getAacData;
@@ -76,6 +78,7 @@ public class AudioEncoder extends BaseEncoder implements GetMicrophoneData {
       audioFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, maxInputSize);
       audioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE,
           MediaCodecInfo.CodecProfileLevel.AACObjectLC);
+      setCallback();
       codec.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
       running = false;
       Log.i(TAG, "prepared");
@@ -106,6 +109,7 @@ public class AudioEncoder extends BaseEncoder implements GetMicrophoneData {
 
   @Override
   protected void stopImp() {
+    bytesRead = 0;
     Log.i(TAG, "stopped");
   }
 
@@ -119,6 +123,19 @@ public class AudioEncoder extends BaseEncoder implements GetMicrophoneData {
   @Override
   protected Frame getInputFrame() throws InterruptedException {
     return getFrame != null ? getFrame.getInputFrame() : queue.take();
+  }
+
+  @Override
+  protected long calculatePts(Frame frame, long presentTimeUs) {
+    long pts;
+    if (tsModeBuffer) {
+      int channels = isStereo ? 2 : 1;
+      pts = 1000000 * bytesRead / 2 / channels / sampleRate;
+      bytesRead += frame.getSize();
+    } else {
+      pts = System.nanoTime() / 1000 - presentTimeUs;
+    }
+    return pts;
   }
 
   @Override
@@ -158,20 +175,22 @@ public class AudioEncoder extends BaseEncoder implements GetMicrophoneData {
     }
 
     Log.i(TAG, mediaCodecInfoList.size() + " encoders found");
-    for (MediaCodecInfo mci : mediaCodecInfoList) {
-      String name = mci.getName().toLowerCase();
-      Log.i(TAG, "Encoder " + mci.getName());
-      if (name.contains("omx.google") && mediaCodecInfoList.size() > 1) {
-        //skip omx.google.aac.encoder if possible
-        continue;
-      }
-      return mci;
-    }
-    return null;
+    if (mediaCodecInfoList.isEmpty()) return null;
+    else return mediaCodecInfoList.get(0);
   }
 
   public void setSampleRate(int sampleRate) {
     this.sampleRate = sampleRate;
+  }
+
+  public boolean isTsModeBuffer() {
+    return tsModeBuffer;
+  }
+
+  public void setTsModeBuffer(boolean tsModeBuffer) {
+    if (!isRunning()) {
+      this.tsModeBuffer = tsModeBuffer;
+    }
   }
 
   @Override

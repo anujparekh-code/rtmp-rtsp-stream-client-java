@@ -17,6 +17,7 @@
 package com.pedro.rtpstreamer;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -40,6 +41,7 @@ import com.pedro.rtpstreamer.filestreamexample.RtmpFromFileActivity;
 import com.pedro.rtpstreamer.filestreamexample.RtspFromFileActivity;
 import com.pedro.rtpstreamer.openglexample.OpenGlRtmpActivity;
 import com.pedro.rtpstreamer.openglexample.OpenGlRtspActivity;
+import com.pedro.rtpstreamer.rotation.RotationExampleActivity;
 import com.pedro.rtpstreamer.surfacemodeexample.SurfaceModeRtmpActivity;
 import com.pedro.rtpstreamer.surfacemodeexample.SurfaceModeRtspActivity;
 import com.pedro.rtpstreamer.texturemodeexample.TextureModeRtmpActivity;
@@ -81,14 +83,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
   }
 
+  @SuppressLint("NewApi")
   private void createList() {
     activities = new ArrayList<>();
-    activities.add(
-        new ActivityLink(new Intent(this, RtmpActivity.class), getString(R.string.rtmp_streamer),
-            JELLY_BEAN));
-    activities.add(
-        new ActivityLink(new Intent(this, RtspActivity.class), getString(R.string.rtsp_streamer),
-            JELLY_BEAN));
+    activities.add(new ActivityLink(new Intent(this, RtmpActivity.class),
+        getString(R.string.rtmp_streamer), JELLY_BEAN));
+    activities.add(new ActivityLink(new Intent(this, RtspActivity.class),
+        getString(R.string.rtsp_streamer), JELLY_BEAN));
     activities.add(new ActivityLink(new Intent(this, ExampleRtmpActivity.class),
         getString(R.string.default_rtmp), JELLY_BEAN));
     activities.add(new ActivityLink(new Intent(this, ExampleRtspActivity.class),
@@ -113,6 +114,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         getString(R.string.display_rtmp), LOLLIPOP));
     activities.add(new ActivityLink(new Intent(this, BackgroundActivity.class),
         getString(R.string.service_rtp), LOLLIPOP));
+    activities.add(new ActivityLink(new Intent(this, RotationExampleActivity.class),
+        getString(R.string.rotation_rtmp), LOLLIPOP));
   }
 
   private void setListAdapter(List<ActivityLink> activities) {

@@ -23,6 +23,8 @@ import android.os.Build;
 import android.os.Bundle;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Handler;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -71,7 +73,7 @@ public class RtspFromFileActivity extends AppCompatActivity
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_from_file);
-    folder = PathUtils.getRecordPath(this);
+    folder = PathUtils.getRecordPath();
     button = findViewById(R.id.b_start_stop);
     bSelectFile = findViewById(R.id.b_select_file);
     button.setOnClickListener(this);
@@ -94,6 +96,7 @@ public class RtspFromFileActivity extends AppCompatActivity
     super.onPause();
     if (rtspFromFile.isRecording()) {
       rtspFromFile.stopRecord();
+      PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
       bRecord.setText(R.string.start_record);
     }
     if (rtspFromFile.isStreaming()) {
@@ -247,11 +250,13 @@ public class RtspFromFileActivity extends AppCompatActivity
             }
           } catch (IOException e) {
             rtspFromFile.stopRecord();
+            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
             bRecord.setText(R.string.start_record);
             Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
           }
         } else {
           rtspFromFile.stopRecord();
+          PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
           bRecord.setText(R.string.start_record);
           Toast.makeText(this,
               "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
@@ -301,6 +306,7 @@ public class RtspFromFileActivity extends AppCompatActivity
       public void run() {
         if (rtspFromFile.isRecording()) {
           rtspFromFile.stopRecord();
+          PathUtils.updateGallery(getApplicationContext(), folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
           bRecord.setText(R.string.start_record);
           Toast.makeText(RtspFromFileActivity.this,
               "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
@@ -334,7 +340,16 @@ public class RtspFromFileActivity extends AppCompatActivity
 
   @Override
   public void onStopTrackingTouch(SeekBar seekBar) {
-    if (rtspFromFile.isStreaming()) rtspFromFile.moveTo(seekBar.getProgress());
+    if (rtspFromFile.isStreaming() || rtspFromFile.isRecording()) {
+      rtspFromFile.moveTo(seekBar.getProgress());
+      //re sync after move to avoid async
+      new Handler().postDelayed(new Runnable() {
+        @Override
+        public void run() {
+          rtspFromFile.reSyncFile();
+        }
+      }, 500);
+    }
     touching = false;
   }
 }

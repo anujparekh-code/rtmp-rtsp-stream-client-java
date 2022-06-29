@@ -47,6 +47,7 @@ public abstract class BaseEncoder implements EncoderCallback {
   private MediaCodec.Callback callback;
   private long oldTimeStamp = 0L;
   protected boolean shouldReset = true;
+  private Handler handler;
 
   public void restart() {
     start(false);
@@ -61,16 +62,19 @@ public abstract class BaseEncoder implements EncoderCallback {
     initCodec();
   }
 
-  private void initCodec() {
+  protected void setCallback() {
     handlerThread = new HandlerThread(TAG);
     handlerThread.start();
-    Handler handler = new Handler(handlerThread.getLooper());
+    handler = new Handler(handlerThread.getLooper());
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       createAsyncCallback();
       codec.setCallback(callback, handler);
-      codec.start();
-    } else {
-      codec.start();
+    }
+  }
+
+  private void initCodec() {
+    codec.start();
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
       handler.post(new Runnable() {
         @Override
         public void run() {
@@ -174,6 +178,8 @@ public abstract class BaseEncoder implements EncoderCallback {
 
   protected abstract Frame getInputFrame() throws InterruptedException;
 
+  protected abstract long calculatePts(Frame frame, long presentTimeUs);
+
   private void processInput(@NonNull ByteBuffer byteBuffer, @NonNull MediaCodec mediaCodec,
       int inBufferIndex) throws IllegalStateException {
     try {
@@ -182,7 +188,7 @@ public abstract class BaseEncoder implements EncoderCallback {
       byteBuffer.clear();
       int size = Math.max(0, Math.min(frame.getSize(), byteBuffer.remaining()) - frame.getOffset());
       byteBuffer.put(frame.getBuffer(), frame.getOffset(), size);
-      long pts = System.nanoTime() / 1000 - presentTimeUs;
+      long pts = calculatePts(frame, presentTimeUs);
       mediaCodec.queueInputBuffer(inBufferIndex, 0, size, pts, 0);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

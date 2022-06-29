@@ -173,6 +173,11 @@ public abstract class OpenGlViewBase extends SurfaceView
   public Point getEncoderSize() {
     return new Point(encoderWidth, encoderHeight);
   }
+//  @Override
+//  public Point getEncoderSize() {
+//    return new Point(encoderWidth, encoderHeight);
+//  }
+
   @Override
   public void start() {
     synchronized (sync) {

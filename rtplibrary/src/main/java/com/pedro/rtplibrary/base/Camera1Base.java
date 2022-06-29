@@ -32,7 +32,6 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-
 import com.pedro.encoder.Frame;
 import com.pedro.encoder.audio.AudioEncoder;
 import com.pedro.encoder.audio.GetAacData;
@@ -50,13 +49,14 @@ import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.encoder.video.FormatVideoEncoder;
 import com.pedro.encoder.video.GetVideoData;
 import com.pedro.encoder.video.VideoEncoder;
+import com.pedro.rtplibrary.base.recording.BaseRecordController;
+import com.pedro.rtplibrary.base.recording.RecordController;
+import com.pedro.rtplibrary.util.AndroidMuxerRecordController;
 import com.pedro.rtplibrary.util.FpsListener;
-import com.pedro.rtplibrary.util.RecordController;
 import com.pedro.rtplibrary.view.GlInterface;
 import com.pedro.rtplibrary.view.LightOpenGlView;
 import com.pedro.rtplibrary.view.OffScreenGlThread;
 import com.pedro.rtplibrary.view.OpenGlView;
-
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -67,11 +67,11 @@ import java.util.List;
  * and OpenGlView(Custom SurfaceView that use OpenGl). SurfaceView and TextureView use buffer to
  * buffer encoding mode for H264 and OpenGlView use Surface to buffer mode(This mode is generally
  * better because skip buffer processing).
- * <p>
+ *
  * API requirements:
  * SurfaceView and TextureView mode: API 16+.
  * OpenGlView: API 18+.
- * <p>
+ *
  * Created by pedro on 7/07/17.
  */
 
@@ -87,9 +87,9 @@ public abstract class Camera1Base
     private AudioEncoder audioEncoder;
     private GlInterface glInterface;
     private boolean streaming = false;
-    private boolean audioInitialized = false;
+    protected boolean audioInitialized = false;
     private boolean onPreview = false;
-    protected RecordController recordController;
+    protected BaseRecordController recordController;
     private int previewWidth, previewHeight;
     private final FpsListener fpsListener = new FpsListener();
 
@@ -135,15 +135,15 @@ public abstract class Camera1Base
     private void init() {
         videoEncoder = new VideoEncoder(this);
         setMicrophoneMode(MicrophoneMode.ASYNC);
-        recordController = new RecordController();
+        recordController = new AndroidMuxerRecordController();
     }
 
     /**
      * Must be called before prepareAudio.
      *
      * @param microphoneMode mode to work accord to audioEncoder. By default ASYNC:
-     *                       SYNC using same thread. This mode could solve choppy audio or audio frame discarded.
-     *                       ASYNC using other thread.
+     * SYNC using same thread. This mode could solve choppy audio or audio frame discarded.
+     * ASYNC using other thread.
      */
     public void setMicrophoneMode(MicrophoneMode microphoneMode) {
         switch (microphoneMode) {
@@ -151,10 +151,17 @@ public abstract class Camera1Base
                 microphoneManager = new MicrophoneManagerManual();
                 audioEncoder = new AudioEncoder(this);
                 audioEncoder.setGetFrame(((MicrophoneManagerManual) microphoneManager).getGetFrame());
+                audioEncoder.setTsModeBuffer(false);
                 break;
             case ASYNC:
                 microphoneManager = new MicrophoneManager(this);
                 audioEncoder = new AudioEncoder(this);
+                audioEncoder.setTsModeBuffer(false);
+                break;
+            case BUFFER:
+                microphoneManager = new MicrophoneManager(this);
+                audioEncoder = new AudioEncoder(this);
+                audioEncoder.setTsModeBuffer(true);
                 break;
         }
     }
@@ -246,7 +253,7 @@ public abstract class Camera1Base
     /**
      * Basic auth developed to work with Wowza. No tested with other server
      *
-     * @param user     auth.
+     * @param user auth.
      * @param password auth.
      */
     public abstract void setAuthorization(String user, String password);
@@ -255,19 +262,20 @@ public abstract class Camera1Base
      * Call this method before use @startStream. If not you will do a stream without video. NOTE:
      * Rotation with encoder is silence ignored in some devices.
      *
-     * @param width    resolution in px.
-     * @param height   resolution in px.
-     * @param fps      frames per second of the stream.
-     * @param bitrate  H264 in bps.
+     * @param width resolution in px.
+     * @param height resolution in px.
+     * @param fps frames per second of the stream.
+     * @param bitrate H264 in bps.
      * @param rotation could be 90, 180, 270 or 0. You should use CameraHelper.getCameraOrientation
-     *                 with SurfaceView or TextureView and 0 with OpenGlView or LightOpenGlView. NOTE: Rotation with
-     *                 encoder is silence ignored in some devices.
+     * with SurfaceView or TextureView and 0 with OpenGlView or LightOpenGlView. NOTE: Rotation with
+     * encoder is silence ignored in some devices.
      * @return true if success, false if you get a error (Normally because the encoder selected
      * doesn't support any configuration seated or your device hasn't a H264 encoder).
      */
     public boolean prepareVideo(int width, int height, int fps, int bitrate, int iFrameInterval,
-                                int rotation, int avcProfile, int avcProfileLevel) {
-        if (onPreview && width != previewWidth || height != previewHeight || fps != videoEncoder.getFps()) {
+            int rotation, int avcProfile, int avcProfileLevel) {
+        if (onPreview && width != previewWidth || height != previewHeight
+                || fps != videoEncoder.getFps() || rotation != videoEncoder.getRotation()) {
             stopPreview();
             onPreview = true;
         }
@@ -281,7 +289,7 @@ public abstract class Camera1Base
      * backward compatibility reason
      */
     public boolean prepareVideo(int width, int height, int fps, int bitrate, int iFrameInterval,
-                                int rotation) {
+            int rotation) {
         return prepareVideo(width, height, fps, bitrate, iFrameInterval, rotation, -1, -1);
     }
 
@@ -299,17 +307,17 @@ public abstract class Camera1Base
     /**
      * Call this method before use @startStream. If not you will do a stream without audio.
      *
-     * @param bitrate         AAC in kb.
-     * @param sampleRate      of audio in hz. Can be 8000, 16000, 22500, 32000, 44100.
-     * @param isStereo        true if you want Stereo audio (2 audio channels), false if you want Mono audio
-     *                        (1 audio channel).
-     * @param echoCanceler    true enable echo canceler, false disable.
+     * @param bitrate AAC in kb.
+     * @param sampleRate of audio in hz. Can be 8000, 16000, 22500, 32000, 44100.
+     * @param isStereo true if you want Stereo audio (2 audio channels), false if you want Mono audio
+     * (1 audio channel).
+     * @param echoCanceler true enable echo canceler, false disable.
      * @param noiseSuppressor true enable noise suppressor, false  disable.
      * @return true if success, false if you get a error (Normally because the encoder selected
      * doesn't support any configuration seated or your device hasn't a AAC encoder).
      */
     public boolean prepareAudio(int audioSource, int bitrate, int sampleRate, boolean isStereo, boolean echoCanceler,
-                                boolean noiseSuppressor) {
+            boolean noiseSuppressor) {
         if (!microphoneManager.createMicrophone(audioSource, sampleRate, isStereo, echoCanceler, noiseSuppressor)) {
             return false;
         }
@@ -320,7 +328,7 @@ public abstract class Camera1Base
     }
 
     public boolean prepareAudio(int bitrate, int sampleRate, boolean isStereo, boolean echoCanceler,
-                                boolean noiseSuppressor) {
+            boolean noiseSuppressor) {
         return prepareAudio(MediaRecorder.AudioSource.DEFAULT, bitrate, sampleRate, isStereo, echoCanceler,
                 noiseSuppressor);
     }
@@ -361,7 +369,7 @@ public abstract class Camera1Base
     }
 
     /**
-     * Starts recording an MP4 video. Needs to be called while streaming.
+     * Starts recording a MP4 video.
      *
      * @param path Where file will be saved.
      * @throws IOException If initialized before a stream.
@@ -381,16 +389,30 @@ public abstract class Camera1Base
     public void startRecord(@NonNull final String path) throws IOException {
         startRecord(path, null);
     }
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public void startRecord2(@NonNull final String path, @Nullable RecordController.Listener listener)
+            throws IOException {
+        recordController.startRecord2(path, listener);
+        if (!streaming) {
+            startEncoders();
+        } else if (videoEncoder.isRunning()) {
+            requestKeyFrame();
+        }
+    }
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public void startRecord2(@NonNull final String path) throws IOException {
+        startRecord2(path, null);
+    }
 
     /**
-     * Starts recording an MP4 video. Needs to be called while streaming.
+     * Starts recording a MP4 video.
      *
      * @param fd Where the file will be saved.
      * @throws IOException If initialized before a stream.
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void startRecord(@NonNull final FileDescriptor fd,
-                            @Nullable RecordController.Listener listener) throws IOException {
+            @Nullable RecordController.Listener listener) throws IOException {
         recordController.startRecord(fd, listener);
         if (!streaming) {
             startEncoders();
@@ -464,24 +486,26 @@ public abstract class Camera1Base
      * Start camera preview. Ignored, if stream or preview is started.
      *
      * @param cameraFacing front or back camera. Like: {@link com.pedro.encoder.input.video.CameraHelper.Facing#BACK}
-     *                     {@link com.pedro.encoder.input.video.CameraHelper.Facing#FRONT}
-     * @param width        of preview in px.
-     * @param height       of preview in px.
-     * @param rotation     camera rotation (0, 90, 180, 270). Recommended: {@link
-     *                     com.pedro.encoder.input.video.CameraHelper#getCameraOrientation(Context)}
+     * {@link com.pedro.encoder.input.video.CameraHelper.Facing#FRONT}
+     * @param width of preview in px.
+     * @param height of preview in px.
+     * @param rotation camera rotation (0, 90, 180, 270). Recommended: {@link
+     * com.pedro.encoder.input.video.CameraHelper#getCameraOrientation(Context)}
      */
-    public void startPreview(CameraHelper.Facing cameraFacing, int width, int height, int rotation) {
+    public void startPreview(CameraHelper.Facing cameraFacing, int width, int height, int fps, int rotation) {
         if (!isStreaming() && !onPreview && !(glInterface instanceof OffScreenGlThread)) {
             previewWidth = width;
             previewHeight = height;
+            videoEncoder.setFps(fps);
+            videoEncoder.setRotation(rotation);
             if (glInterface != null && Build.VERSION.SDK_INT >= 18) {
-                boolean isPortrait = CameraHelper.isPortrait(context);
-                if (isPortrait) {
+                if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
                     glInterface.setEncoderSize(height, width);
                 } else {
                     glInterface.setEncoderSize(width, height);
                 }
                 glInterface.setRotation(0);
+                glInterface.setFps(fps);
                 glInterface.start();
                 cameraManager.setSurfaceTexture(glInterface.getSurfaceTexture());
             }
@@ -497,7 +521,58 @@ public abstract class Camera1Base
         }
     }
 
+    /**
+     * Start camera preview. Ignored, if stream or preview is started.
+     *
+     * @param cameraId camera id.
+     * {@link com.pedro.encoder.input.video.CameraHelper.Facing#FRONT}
+     * @param width of preview in px.
+     * @param height of preview in px.
+     * @param rotation camera rotation (0, 90, 180, 270). Recommended: {@link
+     * com.pedro.encoder.input.video.CameraHelper#getCameraOrientation(Context)}
+     */
+    public void startPreview(int cameraId, int width, int height, int fps, int rotation) {
+        if (!isStreaming() && !onPreview && !(glInterface instanceof OffScreenGlThread)) {
+            previewWidth = width;
+            previewHeight = height;
+            videoEncoder.setFps(fps);
+            videoEncoder.setRotation(rotation);
+            if (glInterface != null && Build.VERSION.SDK_INT >= 18) {
+                if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
+                    glInterface.setEncoderSize(height, width);
+                } else {
+                    glInterface.setEncoderSize(width, height);
+                }
+                glInterface.setRotation(0);
+                glInterface.setFps(fps);
+                glInterface.start();
+                cameraManager.setSurfaceTexture(glInterface.getSurfaceTexture());
+            }
+            cameraManager.setRotation(rotation);
+            cameraManager.start(cameraId, width, height, videoEncoder.getFps());
+            onPreview = true;
+        } else if (!isStreaming() && !onPreview && glInterface instanceof OffScreenGlThread) {
+            // if you are using background mode startPreview only work to indicate
+            // that you want start with front or back camera
+            cameraManager.setCameraSelect(cameraId);
+        } else {
+            Log.e(TAG, "Streaming or preview started, ignored");
+        }
+    }
+
+    public void startPreview(CameraHelper.Facing cameraFacing, int width, int height, int rotation) {
+        startPreview(cameraFacing, width, height, videoEncoder.getFps(), rotation);
+    }
+
+    public void startPreview(int cameraFacing, int width, int height, int rotation) {
+        startPreview(cameraFacing, width, height, videoEncoder.getFps(), rotation);
+    }
+
     public void startPreview(CameraHelper.Facing cameraFacing, int width, int height) {
+        startPreview(cameraFacing, width, height, CameraHelper.getCameraOrientation(context));
+    }
+
+    public void startPreview(int cameraFacing, int width, int height) {
         startPreview(cameraFacing, width, height, CameraHelper.getCameraOrientation(context));
     }
 
@@ -506,6 +581,10 @@ public abstract class Camera1Base
     }
 
     public void startPreview(CameraHelper.Facing cameraFacing) {
+        startPreview(cameraFacing, videoEncoder.getWidth(), videoEncoder.getHeight());
+    }
+
+    public void startPreview(int cameraFacing) {
         startPreview(cameraFacing, videoEncoder.getWidth(), videoEncoder.getHeight());
     }
 
@@ -557,6 +636,44 @@ public abstract class Camera1Base
         cameraManager.setZoom(event);
     }
 
+    /**
+     * Set zoomIn or zoomOut to camera.
+     * Use this method if you use a zoom slider.
+     *
+     * @param level Expected to be >= 1 and <= max zoom level
+     * @see Camera2Base#getZoom()
+     */
+    public void setZoom(int level) {
+        cameraManager.setZoom(level);
+    }
+
+    /**
+     * Return current zoom level
+     *
+     * @return current zoom level
+     */
+    public float getZoom() {
+        return cameraManager.getZoom();
+    }
+
+    /**
+     * Return max zoom level
+     *
+     * @return max zoom level range
+     */
+    public int getMaxZoom() {
+        return cameraManager.getMaxZoom();
+    }
+
+    /**
+     * Return min zoom level
+     *
+     * @return min zoom level range
+     */
+    public int getMinZoom() {
+        return cameraManager.getMinZoom();
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void startStreamAndRecord(String url, String path, RecordController.Listener listener) throws IOException {
         startStream(url);
@@ -574,9 +691,9 @@ public abstract class Camera1Base
      * Need be called after @prepareVideo or/and @prepareAudio. This method override resolution of
      *
      * @param url of the stream like: protocol://ip:port/application/streamName
-     *            <p>
-     *            RTSP: rtsp://192.168.1.1:1935/live/pedroSG94 RTSPS: rtsps://192.168.1.1:1935/live/pedroSG94
-     *            RTMP: rtmp://192.168.1.1:1935/live/pedroSG94 RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
+     *
+     * RTSP: rtsp://192.168.1.1:1935/live/pedroSG94 RTSPS: rtsps://192.168.1.1:1935/live/pedroSG94
+     * RTMP: rtmp://192.168.1.1:1935/live/pedroSG94 RTMPS: rtmps://192.168.1.1:1935/live/pedroSG94
      * @startPreview to resolution seated in @prepareVideo. If you never startPreview this method
      * startPreview for you to resolution seated in @prepareVideo.
      */
@@ -650,7 +767,7 @@ public abstract class Camera1Base
             streaming = false;
             stopStreamRtp();
         }
-        if (!recordController.isRecording() && !recordController.isRecording2()) {
+        if (!recordController.isRecording()) {
             if (audioInitialized) microphoneManager.stop();
             if (glInterface != null && Build.VERSION.SDK_INT >= 18) {
                 glInterface.removeMediaCodecSurface();
@@ -736,17 +853,28 @@ public abstract class Camera1Base
     }
 
     /**
+     * Set a custom size of audio buffer input.
+     * If you set 0 or less you can disable it to use library default value.
+     * Must be called before of prepareAudio method.
+     *
+     * @param size in bytes. Recommended multiple of 1024 (2048, 4096, 8196, etc)
+     */
+    public void setAudioMaxInputSize(int size) {
+        microphoneManager.setMaxInputSize(size);
+    }
+
+    /**
      * Mute microphone, can be called before, while and after stream.
      */
     public void disableAudio() {
-        if (audioInitialized) microphoneManager.mute();
+        microphoneManager.mute();
     }
 
     /**
      * Enable a muted microphone, can be called before, while and after stream.
      */
     public void enableAudio() {
-        if (audioInitialized) microphoneManager.unMute();
+        microphoneManager.unMute();
     }
 
     /**
@@ -780,10 +908,18 @@ public abstract class Camera1Base
      * @throws CameraOpenException If the other camera doesn't support same resolution.
      */
     public void switchCamera() throws CameraOpenException {
-        if (isStreaming() || onPreview) {
+        if (isStreaming() || isRecording() || onPreview) {
             cameraManager.switchCamera();
         } else {
-            cameraManager.setCameraFacing(getCameraFacing() == CameraHelper.Facing.FRONT ? CameraHelper.Facing.BACK : CameraHelper.Facing.FRONT);
+            cameraManager.setCameraFacing(getCameraFacing() ==  CameraHelper.Facing.FRONT ? CameraHelper.Facing.BACK : CameraHelper.Facing.FRONT);
+        }
+    }
+
+    public void switchCamera(int cameraId) throws CameraOpenException {
+        if (isStreaming() || onPreview) {
+            cameraManager.switchCamera(cameraId);
+        } else {
+            cameraManager.setCameraSelect(cameraId);
         }
     }
 
@@ -922,30 +1058,20 @@ public abstract class Camera1Base
         recordController.setAudioFormat(mediaFormat);
     }
 
+    public void setRecordController(BaseRecordController recordController) {
+        if (!isRecording()) this.recordController = recordController;
+    }
+
     public abstract void setLogs(boolean enable);
 
     public abstract void setCheckServerAlive(boolean enable);
-
     /**
      * Starts recording an MP4 video. Needs to be called while streaming.
      *
      * @param path Where file will be saved.
      * @throws IOException If initialized before a stream.
      */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public void startRecord2(@NonNull final String path, @Nullable RecordController.Listener listener)
-            throws IOException {
-        recordController.startRecord2(path, listener);
-        if (!streaming) {
-            startEncoders();
-        } else if (videoEncoder.isRunning()) {
-            requestKeyFrame();
-        }
-    }
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-    public void startRecord2(@NonNull final String path) throws IOException {
-        startRecord2(path, null);
-    }
+
 
     /**
      * Stop record MP4 video started with @startRecord. If you don't call it file will be unreadable.

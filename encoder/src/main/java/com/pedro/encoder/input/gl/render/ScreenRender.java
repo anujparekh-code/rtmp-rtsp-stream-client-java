@@ -64,7 +64,6 @@ public class ScreenRender {
 
   private int streamWidth;
   private int streamHeight;
-  private boolean isPortrait;
 
   public ScreenRender() {
     squareVertex =
@@ -77,7 +76,6 @@ public class ScreenRender {
   }
 
   public void initGl(Context context) {
-    isPortrait = CameraHelper.isPortrait(context);
     GlUtil.checkGlError("initGl start");
     String vertexShader = GlUtil.getStringFromRaw(context, R.raw.simple_vertex);
     String fragmentShader = GlUtil.getStringFromRaw(context, R.raw.fxaa);
@@ -94,14 +92,47 @@ public class ScreenRender {
   }
 
   public void draw(int width, int height, boolean keepAspectRatio, int mode, int rotation,
-      boolean isPreview, boolean flipStreamVertical, boolean flipStreamHorizontal) {
+      boolean flipStreamVertical, boolean flipStreamHorizontal) {
     GlUtil.checkGlError("drawScreen start");
 
-    SizeCalculator.processMatrix(rotation, width, height, isPreview, isPortrait,
-        flipStreamHorizontal, flipStreamVertical, mode, MVPMatrix);
+    SizeCalculator.processMatrix(rotation, flipStreamHorizontal, flipStreamVertical, MVPMatrix);
     SizeCalculator.calculateViewPort(keepAspectRatio, mode, width, height, streamWidth,
         streamHeight);
 
+    draw(width, height);
+  }
+
+  public void drawEncoder(int width, int height, boolean isPortrait, int rotation,
+      boolean flipStreamVertical, boolean flipStreamHorizontal) {
+    GlUtil.checkGlError("drawScreen start");
+
+    SizeCalculator.processMatrix(rotation, flipStreamHorizontal, flipStreamVertical, MVPMatrix);
+    SizeCalculator.calculateViewPortEncoder(width, height, isPortrait);
+
+    draw(width, height);
+  }
+
+  public void drawPreview(int width, int height, boolean isPortrait, boolean keepAspectRatio,
+      int mode, int rotation, boolean flipStreamVertical, boolean flipStreamHorizontal) {
+    GlUtil.checkGlError("drawScreen start");
+
+    SizeCalculator.processMatrix(rotation, flipStreamHorizontal, flipStreamVertical, MVPMatrix);
+    float factor = (float) streamWidth / (float) streamHeight;
+    int w;
+    int h;
+    if (factor >= 1f) {
+      w = isPortrait ? streamHeight : streamWidth;
+      h = isPortrait ? streamWidth : streamHeight;
+    } else {
+      w = isPortrait ? streamWidth : streamHeight;
+      h = isPortrait ? streamHeight : streamWidth;
+    }
+    SizeCalculator.calculateViewPort(keepAspectRatio, mode, width, height, w, h);
+
+    draw(width, height);
+  }
+
+  private void draw(int width, int height) {
     GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
 

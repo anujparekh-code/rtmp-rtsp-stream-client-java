@@ -25,6 +25,7 @@ import com.pedro.rtsp.rtp.sockets.RtpSocketTcp
 import com.pedro.rtsp.utils.BitrateManager
 import com.pedro.rtsp.utils.ConnectCheckerRtsp
 import com.pedro.rtsp.utils.RtpConstants
+import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.*
@@ -39,6 +40,7 @@ open class RtspSender(private val connectCheckerRtsp: ConnectCheckerRtsp) : Vide
   private var aacPacket: AacPacket? = null
   private var rtpSocket: BaseRtpSocket? = null
   private var baseSenderReport: BaseSenderReport? = null
+  @Volatile
   private var running = false
 
   @Volatile
@@ -57,6 +59,7 @@ open class RtspSender(private val connectCheckerRtsp: ConnectCheckerRtsp) : Vide
     private const val TAG = "RtspSender"
   }
 
+  @Throws(IOException::class)
   fun setSocketsInfo(protocol: Protocol, videoSourcePorts: IntArray, audioSourcePorts: IntArray) {
     rtpSocket = BaseRtpSocket.getInstance(protocol, videoSourcePorts[0], audioSourcePorts[0])
     baseSenderReport = BaseSenderReport.getInstance(protocol, videoSourcePorts[1], audioSourcePorts[1])
@@ -76,6 +79,7 @@ open class RtspSender(private val connectCheckerRtsp: ConnectCheckerRtsp) : Vide
   private val defaultCacheSize: Int
     get() = 10 * 1024 * 1024 / RtpConstants.MTU
 
+  @Throws(IOException::class)
   fun setDataStream(outputStream: OutputStream, host: String) {
     rtpSocket?.setDataStream(outputStream, host)
     baseSenderReport?.setDataStream(outputStream, host)
@@ -126,7 +130,7 @@ open class RtspSender(private val connectCheckerRtsp: ConnectCheckerRtsp) : Vide
       aacPacket?.setSSRC(ssrcAudio)
       val isTcp = rtpSocket is RtpSocketTcp
 
-      while (!Thread.interrupted()) {
+      while (!Thread.interrupted() && running) {
         try {
           val rtpFrame = rtpFrameBlockingQueue.poll(1, TimeUnit.SECONDS)
           if (rtpFrame == null) {
@@ -144,12 +148,12 @@ open class RtspSender(private val connectCheckerRtsp: ConnectCheckerRtsp) : Vide
           }
           if (baseSenderReport?.update(rtpFrame, isEnableLogs) == true) {
             //bytes to bits (4 is tcp header length)
-            val reportSize = if (isTcp) baseSenderReport?.PACKET_LENGTH ?: 0 + 4 else baseSenderReport?.PACKET_LENGTH ?: 0
+            val reportSize = if (isTcp) baseSenderReport?.PACKET_LENGTH ?: (0 + 4) else baseSenderReport?.PACKET_LENGTH ?: 0
             bitrateManager.calculateBitrate(reportSize * 8.toLong())
           }
         } catch (e: Exception) {
           //InterruptedException is only when you disconnect manually, you don't need report it.
-          if (e !is InterruptedException) {
+          if (e !is InterruptedException && running) {
             connectCheckerRtsp.onConnectionFailedRtsp("Error send packet, " + e.message)
             Log.e(TAG, "send error: ", e)
           }

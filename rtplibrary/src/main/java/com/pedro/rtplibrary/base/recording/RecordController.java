@@ -15,8 +15,10 @@ import java.nio.ByteBuffer;
 public interface RecordController {
 
     void startRecord(@NonNull String path, @Nullable Listener listener) throws IOException;
+    void startRecord2(@NonNull String path, @Nullable Listener listener) throws IOException;
     void startRecord(@NonNull FileDescriptor fd, @Nullable Listener listener) throws IOException;
     void stopRecord();
+    void stopRecord2();
     void recordVideo(ByteBuffer videoBuffer, MediaCodec.BufferInfo videoInfo);
     void recordAudio(ByteBuffer audioBuffer, MediaCodec.BufferInfo audioInfo);
     void setVideoFormat(MediaFormat videoFormat, boolean isOnlyVideo);

@@ -3,11 +3,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 
 android {
-  compileSdkVersion 31
+  compileSdkVersion 32
 
   defaultConfig {
     minSdkVersion 16
-    targetSdkVersion 31
+    targetSdkVersion 32
     versionCode version_code
     versionName version_name
   }
@@ -17,19 +17,23 @@ android {
     }
   }
 
-  afterEvaluate {
-    publishing {
-      publications {
-        // Creates a Maven publication called "release".
-        release(MavenPublication) {
-          // Applies the component for the release build variant.
-          from components.release
+  publishing {
+    singleVariant("release")
+  }
+}
 
-          // You can then customize attributes of the publication as shown below.
-          groupId = "$library_group"
-          artifactId = "rtmp"
-          version = "$version_name"
-        }
+afterEvaluate {
+  publishing {
+    publications {
+      // Creates a Maven publication called "release".
+      release(MavenPublication) {
+        // Applies the component for the release build variant.
+        from components.release
+
+        // You can then customize attributes of the publication as shown below.
+        groupId = "$library_group"
+        artifactId = "rtmp"
+        version = "$version_name"
       }
     }
   }

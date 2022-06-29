@@ -21,6 +21,7 @@
 
   <application
       android:requestLegacyExternalStorage="true"
+      android:usesCleartextTraffic="true"
       android:allowBackup="true"
       android:icon="@mipmap/ic_launcher"
       android:supportsRtl="true"
@@ -106,6 +107,15 @@
     <activity
         android:name=".backgroundexample.BackgroundActivity"
         android:label="@string/service_rtp"
+        />
+
+    <activity android:name=".rotation.RotationExampleActivity"
+        android:label="@string/rotation_rtmp"
+        android:screenOrientation="fullSensor"
+        />
+
+    <service android:name=".rotation.StreamService"
+        android:foregroundServiceType="mediaProjection"
         />
 
     <service android:name=".backgroundexample.RtpService"

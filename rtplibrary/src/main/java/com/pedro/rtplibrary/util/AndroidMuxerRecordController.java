@@ -27,7 +27,10 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import com.pedro.encoder.utils.CodecUtil;
+import com.pedro.rtplibrary.base.recording.RecordController;
 import com.pedro.rtsp.utils.RtpConstants;
+
+import com.pedro.rtplibrary.base.recording.BaseRecordController;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -38,11 +41,9 @@ import java.nio.ByteBuffer;
  * <p>
  * Class to control video recording with MediaMuxer.
  */
-public class RecordController {
-
+public class AndroidMuxerRecordController extends BaseRecordController {
     private static final String TAG = "RecordController";
-    private Status status = Status.STOPPED;
-    private Status status2 = Status.STOPPED;
+
     private MediaMuxer mediaMuxer;
     private MediaMuxer mediaMuxer2;
     private MediaFormat videoFormat, audioFormat;
@@ -66,23 +67,26 @@ public class RecordController {
 
     private String videoFilePath;
     private String videoFilePath2;
+//
+//    public enum Status {
+//        STARTED, STOPPED, RECORDING, PAUSED, RESUMED
+//    }
+//
 
-    public enum Status {
-        STARTED, STOPPED, RECORDING, PAUSED, RESUMED
-    }
-
-    public interface Listener {
-        void onStatusChange(Status status);
-    }
-
+    @Override
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void startRecord(@NonNull String path, @Nullable Listener listener) throws IOException {
         videoFilePath = path;
         mediaMuxer = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         this.listener = listener;
         status = Status.STARTED;
-        if (listener != null) listener.onStatusChange(status);
-        if (isOnlyAudio && audioFormat != null) init();
+        if (listener != null) {
+            listener.onStatusChange(status);
+        }
+        if (isOnlyAudio && audioFormat != null) {
+            init();
+        }
+        setVideoFilePath(videoFilePath);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -91,18 +95,29 @@ public class RecordController {
         mediaMuxer2 = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         this.listener2 = listener;
         status2 = Status.STARTED;
-        if (listener != null) listener.onStatusChange(status2);
-        if (isOnlyAudio2 && audioFormat != null) init2();
+        if (listener != null) {
+            listener.onStatusChange(status2);
+        }
+        if (isOnlyAudio2 && audioFormat != null) {
+            init2();
+        }
+        setVideoFilePath2(videoFilePath2);
     }
 
+    @Override
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void startRecord(@NonNull FileDescriptor fd, @Nullable Listener listener) throws IOException {
         mediaMuxer = new MediaMuxer(fd, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         this.listener = listener;
         status = Status.STARTED;
-        if (listener != null) listener.onStatusChange(status);
-        if (isOnlyAudio && audioFormat != null) init();
+        if (listener != null) {
+            listener.onStatusChange(status);
+        }
+        if (isOnlyAudio && audioFormat != null) {
+            init();
+        }
     }
+
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void stopRecord() {
@@ -119,7 +134,9 @@ public class RecordController {
         audioTrack = -1;
         pauseMoment = 0;
         pauseTime = 0;
-        if (listener != null) listener.onStatusChange(status);
+        if (listener != null) {
+            listener.onStatusChange(status);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -137,7 +154,9 @@ public class RecordController {
         audioTrack2 = -1;
         pauseMoment2 = 0;
         pauseTime2 = 0;
-        if (listener2 != null) listener2.onStatusChange(status);
+        if (listener2 != null) {
+            listener2.onStatusChange(status);
+        }
     }
 
     public void setVideoMime(String videoMime) {
@@ -145,17 +164,11 @@ public class RecordController {
     }
 
     public boolean isRunning() {
-        return status == Status.STARTED
-                || status == Status.RECORDING
-                || status == Status.RESUMED
-                || status == Status.PAUSED;
+        return status == Status.STARTED || status == Status.RECORDING || status == Status.RESUMED || status == Status.PAUSED;
     }
 
     public boolean isRunning2() {
-        return status2 == Status.STARTED
-                || status2 == Status.RECORDING
-                || status2 == Status.RESUMED
-                || status2 == Status.PAUSED;
+        return status2 == Status.STARTED || status2 == Status.RECORDING || status2 == Status.RESUMED || status2 == Status.PAUSED;
     }
 
     public boolean isRecording() {
@@ -166,9 +179,9 @@ public class RecordController {
         return status2 == Status.RECORDING;
     }
 
-    public Status getStatus() {
-        return status;
-    }
+//    public Status getStatus() {
+//        return status;
+//    }
 
     public void resetFormats() {
         videoFormat = null;
@@ -179,7 +192,9 @@ public class RecordController {
         if (status == Status.RECORDING) {
             pauseMoment = System.nanoTime() / 1000;
             status = Status.PAUSED;
-            if (listener != null) listener.onStatusChange(status);
+            if (listener != null) {
+                listener.onStatusChange(status);
+            }
         }
     }
 
@@ -187,7 +202,9 @@ public class RecordController {
         if (status2 == Status.RECORDING) {
             pauseMoment2 = System.nanoTime() / 1000;
             status2 = Status.PAUSED;
-            if (listener2 != null) listener2.onStatusChange(status2);
+            if (listener2 != null) {
+                listener2.onStatusChange(status2);
+            }
         }
     }
 
@@ -195,7 +212,9 @@ public class RecordController {
         if (status == Status.PAUSED) {
             pauseTime += System.nanoTime() / 1000 - pauseMoment;
             status = Status.RESUMED;
-            if (listener != null) listener.onStatusChange(status);
+            if (listener != null) {
+                listener.onStatusChange(status);
+            }
         }
     }
 
@@ -203,19 +222,20 @@ public class RecordController {
         if (status2 == Status.PAUSED) {
             pauseTime2 += System.nanoTime() / 1000 - pauseMoment2;
             status2 = Status.RESUMED;
-            if (listener2 != null) listener2.onStatusChange(status2);
+            if (listener2 != null) {
+                listener2.onStatusChange(status2);
+            }
         }
     }
 
-    private boolean isKeyFrame(ByteBuffer videoBuffer) {
+    protected boolean isKeyFrame(ByteBuffer videoBuffer) {
         byte[] header = new byte[5];
         videoBuffer.duplicate().get(header, 0, header.length);
         if (videoMime.equals(CodecUtil.H264_MIME) && (header[4] & 0x1F) == RtpConstants.IDR) {  //h264
             return true;
         } else { //h265
-            return videoMime.equals(CodecUtil.H265_MIME)
-                    && ((header[4] >> 1) & 0x3f) == RtpConstants.IDR_W_DLP
-                    || ((header[4] >> 1) & 0x3f) == RtpConstants.IDR_N_LP;
+            return videoMime.equals(
+                    CodecUtil.H265_MIME) && ((header[4] >> 1) & 0x3f) == RtpConstants.IDR_W_DLP || ((header[4] >> 1) & 0x3f) == RtpConstants.IDR_N_LP;
         }
     }
 
@@ -240,18 +260,26 @@ public class RecordController {
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     private void init() {
-        if (!isOnlyVideo) audioTrack = mediaMuxer.addTrack(audioFormat);
+        if (!isOnlyVideo) {
+            audioTrack = mediaMuxer.addTrack(audioFormat);
+        }
         mediaMuxer.start();
         status = Status.RECORDING;
-        if (listener != null) listener.onStatusChange(status);
+        if (listener != null) {
+            listener.onStatusChange(status);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     private void init2() {
-        if (!isOnlyVideo) audioTrack2 = mediaMuxer2.addTrack(audioFormat);
+        if (!isOnlyVideo) {
+            audioTrack2 = mediaMuxer2.addTrack(audioFormat);
+        }
         mediaMuxer2.start();
         status2 = Status.RECORDING;
-        if (listener2 != null) listener2.onStatusChange(status2);
+        if (listener2 != null) {
+            listener2.onStatusChange(status2);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
@@ -261,10 +289,12 @@ public class RecordController {
                 videoTrack = mediaMuxer.addTrack(videoFormat);
                 init();
             }
-        } else if (status == Status.RESUMED && (videoInfo.flags == MediaCodec.BUFFER_FLAG_KEY_FRAME
-                || isKeyFrame(videoBuffer))) {
+        } else if (status == Status.RESUMED && (videoInfo.flags == MediaCodec.BUFFER_FLAG_KEY_FRAME || isKeyFrame(
+                videoBuffer))) {
             status = Status.RECORDING;
-            if (listener != null) listener.onStatusChange(status);
+            if (listener != null) {
+                listener.onStatusChange(status);
+            }
         }
         if (status == Status.RECORDING) {
             updateFormat(this.videoInfo, videoInfo);
@@ -275,10 +305,12 @@ public class RecordController {
                 videoTrack2 = mediaMuxer2.addTrack(videoFormat);
                 init2();
             }
-        } else if (status2 == Status.RESUMED && (videoInfo.flags == MediaCodec.BUFFER_FLAG_KEY_FRAME
-                || isKeyFrame(videoBuffer))) {
+        } else if (status2 == Status.RESUMED && (videoInfo.flags == MediaCodec.BUFFER_FLAG_KEY_FRAME || isKeyFrame(
+                videoBuffer))) {
             status2 = Status.RECORDING;
-            if (listener2 != null) listener2.onStatusChange(status2);
+            if (listener2 != null) {
+                listener2.onStatusChange(status2);
+            }
         }
         if (status2 == Status.RECORDING) {
             updateFormat2(this.videoInfo, videoInfo);
@@ -306,8 +338,7 @@ public class RecordController {
     public void setAudioFormat(MediaFormat audioFormat, boolean isOnlyAudio) {
         this.audioFormat = audioFormat;
         this.isOnlyAudio = isOnlyAudio;
-        if (isOnlyAudio && status == Status.STARTED
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+        if (isOnlyAudio && status == Status.STARTED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             init();
         }
     }
@@ -321,7 +352,7 @@ public class RecordController {
     }
 
     //We can't reuse info because could produce stream issues
-    private void updateFormat(MediaCodec.BufferInfo newInfo, MediaCodec.BufferInfo oldInfo) {
+    protected void updateFormat(MediaCodec.BufferInfo newInfo, MediaCodec.BufferInfo oldInfo) {
         newInfo.flags = oldInfo.flags;
         newInfo.offset = oldInfo.offset;
         newInfo.size = oldInfo.size;
@@ -345,3 +376,4 @@ public class RecordController {
     }
 
 }
+

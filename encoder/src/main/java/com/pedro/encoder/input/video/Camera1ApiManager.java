@@ -135,6 +135,10 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     facing = cameraFacing;
   }
 
+  public void setCameraSelect(int cameraFacing) {
+    cameraSelect = cameraFacing;
+  }
+
   public void start(CameraHelper.Facing cameraFacing, int width, int height, int fps) {
     int facing = cameraFacing == CameraHelper.Facing.BACK ? Camera.CameraInfo.CAMERA_FACING_BACK
         : Camera.CameraInfo.CAMERA_FACING_FRONT;
@@ -146,8 +150,17 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     start();
   }
 
+  public void start(int facing, int width, int height, int fps) {
+    this.width = width;
+    this.height = height;
+    this.fps = fps;
+    cameraSelect = facing;
+    selectCamera(facing);
+    start();
+  }
+
   public void start(int width, int height, int fps) {
-    start(facing, width, height, fps);
+    start(cameraSelect, width, height, fps);
   }
 
   private void start() {
@@ -198,6 +211,7 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       camera.startPreview();
       running = true;
       if (cameraCallbacks != null) {
+        cameraCallbacks.onCameraOpened();
         cameraCallbacks.onCameraChanged(facing);
       }
       Log.i(TAG, width + "X" + height);
@@ -215,6 +229,54 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
       camera.startPreview();
     }
   }
+
+  public void setZoom(int level) {
+    try {
+      if (camera != null && running && camera.getParameters() != null && camera.getParameters()
+          .isZoomSupported()) {
+        android.hardware.Camera.Parameters params = camera.getParameters();
+        int maxZoom = params.getMaxZoom();
+        if (level > maxZoom) level = maxZoom;
+        else if (level < getMinZoom()) level = getMinZoom();
+        params.setZoom(level);
+        camera.setParameters(params);
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "Error", e);
+    }
+  }
+
+  public int getZoom() {
+    try {
+      if (camera != null && running && camera.getParameters() != null && camera.getParameters()
+          .isZoomSupported()) {
+        android.hardware.Camera.Parameters params = camera.getParameters();
+        return params.getZoom();
+      } else {
+        return getMinZoom();
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "Error", e);
+      return getMinZoom();
+    }
+  }
+
+  public int getMaxZoom() {
+    try {
+      if (camera != null && running && camera.getParameters() != null && camera.getParameters()
+          .isZoomSupported()) {
+        android.hardware.Camera.Parameters params = camera.getParameters();
+        return params.getMaxZoom();
+      } else {
+        return getMinZoom();
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "Error", e);
+      return getMinZoom();
+    }
+  }
+
+  public int getMinZoom() { return 0; }
 
   public void setZoom(MotionEvent event) {
     try {
@@ -373,6 +435,18 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
     camera.addCallbackBuffer(yuvBuffer);
   }
 
+  public Camera.Size getCameraSize(int width, int height) {
+    if (camera != null) {
+      return camera.new Size(width, height);
+    } else {
+      camera = Camera.open(cameraSelect);
+      Camera.Size size = camera.new Size(width, height);
+      camera.release();
+      camera = null;
+      return size;
+    }
+  }
+
   /**
    * See: https://developer.android.com/reference/android/graphics/ImageFormat.html to know name of
    * constant values
@@ -462,6 +536,20 @@ public class Camera1ApiManager implements Camera.PreviewCallback, Camera.FaceDet
           return;
         }
       }
+    }
+  }
+
+  public void switchCamera(int cameraId) throws CameraOpenException {
+    if (camera != null) {
+      int oldCamera = cameraSelect;
+      cameraSelect = cameraId;
+      if (!checkCanOpen()) {
+        cameraSelect = oldCamera;
+        throw new CameraOpenException("This camera resolution cant be opened");
+      }
+      stop();
+      start();
+      return;
     }
   }
 

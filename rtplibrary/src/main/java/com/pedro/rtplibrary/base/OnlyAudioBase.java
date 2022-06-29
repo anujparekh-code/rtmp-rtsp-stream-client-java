@@ -32,7 +32,9 @@ import com.pedro.encoder.input.audio.GetMicrophoneData;
 import com.pedro.encoder.input.audio.MicrophoneManager;
 import com.pedro.encoder.input.audio.MicrophoneManagerManual;
 import com.pedro.encoder.input.audio.MicrophoneMode;
-import com.pedro.rtplibrary.util.RecordController;
+import com.pedro.rtplibrary.base.recording.BaseRecordController;
+import com.pedro.rtplibrary.base.recording.RecordController;
+import com.pedro.rtplibrary.util.AacMuxerRecordController;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -45,14 +47,14 @@ import java.nio.ByteBuffer;
  */
 public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
 
-  private final RecordController recordController;
+  protected BaseRecordController recordController;
   private MicrophoneManager microphoneManager;
   private AudioEncoder audioEncoder;
   private boolean streaming = false;
 
   public OnlyAudioBase() {
     setMicrophoneMode(MicrophoneMode.ASYNC);
-    recordController = new RecordController();
+    recordController = new AacMuxerRecordController();
   }
 
   /**
@@ -68,10 +70,17 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
         microphoneManager = new MicrophoneManagerManual();
         audioEncoder = new AudioEncoder(this);
         audioEncoder.setGetFrame(((MicrophoneManagerManual) microphoneManager).getGetFrame());
+        audioEncoder.setTsModeBuffer(false);
         break;
       case ASYNC:
         microphoneManager = new MicrophoneManager(this);
         audioEncoder = new AudioEncoder(this);
+        audioEncoder.setTsModeBuffer(false);
+        break;
+      case BUFFER:
+        microphoneManager = new MicrophoneManager(this);
+        audioEncoder = new AudioEncoder(this);
+        audioEncoder.setTsModeBuffer(true);
         break;
     }
   }
@@ -137,7 +146,7 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   }
 
   /**
-   * Starts recording an MP4 video. Needs to be called while streaming.
+   * Starts recording an AAC audio.
    *
    * @param path Where file will be saved.
    * @throws IOException If initialized before a stream.
@@ -156,7 +165,7 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   }
 
   /**
-   * Starts recording an MP4 video. Needs to be called while streaming.
+   * Starts recording an AAC audio.
    *
    * @param fd Where the file will be saved.
    * @throws IOException If initialized before a stream.
@@ -176,7 +185,7 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   }
 
   /**
-   * Stop record MP4 video started with @startRecord. If you don't call it file will be unreadable.
+   * Stop record AAC audio started with @startRecord. If you don't call it file will be unreadable.
    */
   @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
   public void stopRecord() {
@@ -209,8 +218,10 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
    * Stop stream started with @startStream.
    */
   public void stopStream() {
-    streaming = false;
-    stopStreamRtp();
+    if (streaming) {
+      streaming = false;
+      stopStreamRtp();
+    }
     if (!recordController.isRecording()) {
       microphoneManager.stop();
       audioEncoder.stop();
@@ -293,6 +304,17 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   public abstract void resetDroppedVideoFrames();
 
   /**
+   * Set a custom size of audio buffer input.
+   * If you set 0 or less you can disable it to use library default value.
+   * Must be called before of prepareAudio method.
+   *
+   * @param size in bytes. Recommended multiple of 1024 (2048, 4096, 8196, etc)
+   */
+  public void setAudioMaxInputSize(int size) {
+    microphoneManager.setMaxInputSize(size);
+  }
+
+  /**
    * Mute microphone, can be called before, while and after stream.
    */
   public void disableAudio() {
@@ -342,6 +364,10 @@ public abstract class OnlyAudioBase implements GetAacData, GetMicrophoneData {
   @Override
   public void onAudioFormat(MediaFormat mediaFormat) {
     recordController.setAudioFormat(mediaFormat, true);
+  }
+
+  public void setRecordController(BaseRecordController recordController) {
+    if (!isRecording()) this.recordController = recordController;
   }
 
   public abstract void setLogs(boolean enable);

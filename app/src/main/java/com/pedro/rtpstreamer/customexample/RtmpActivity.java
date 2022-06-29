@@ -92,7 +92,7 @@ public class RtmpActivity extends AppCompatActivity
     super.onCreate(savedInstanceState);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     setContentView(R.layout.activity_custom);
-    folder = PathUtils.getRecordPath(this);
+    folder = PathUtils.getRecordPath();
     getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     getSupportActionBar().setHomeButtonEnabled(true);
 
@@ -283,12 +283,14 @@ public class RtmpActivity extends AppCompatActivity
             } catch (IOException e) {
               rtmpCamera1.stopRecord();
               rtmpCamera1.stopRecord2();
+              PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
               bRecord.setText(R.string.start_record);
               Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
           } else {
             rtmpCamera1.stopRecord();
             rtmpCamera1.stopRecord2();
+            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
             bRecord.setText(R.string.start_record);
             Toast.makeText(this,
                 "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
@@ -353,6 +355,7 @@ public class RtmpActivity extends AppCompatActivity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
             && rtmpCamera1.isRecording()) {
           rtmpCamera1.stopRecord();
+          PathUtils.updateGallery(getApplicationContext(), folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
           bRecord.setText(R.string.start_record);
           Toast.makeText(RtmpActivity.this,
               "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
@@ -382,6 +385,7 @@ public class RtmpActivity extends AppCompatActivity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
             && rtmpCamera1.isRecording()) {
           rtmpCamera1.stopRecord();
+          PathUtils.updateGallery(getApplicationContext(), folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
           bRecord.setText(R.string.start_record);
           Toast.makeText(RtmpActivity.this,
               "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
@@ -430,6 +434,7 @@ public class RtmpActivity extends AppCompatActivity
   public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2 && rtmpCamera1.isRecording()) {
       rtmpCamera1.stopRecord();
+      PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
       bRecord.setText(R.string.start_record);
       Toast.makeText(this,
           "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
