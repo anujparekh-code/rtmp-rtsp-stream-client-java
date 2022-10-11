@@ -92,7 +92,7 @@
     <activity
         android:name=".openglexample.OpenGlRtmpActivity"
         android:label="@string/opengl_rtmp"
-        android:screenOrientation="portrait"
+        android:screenOrientation="sensor"
         />
     <activity
         android:name=".openglexample.OpenGlRtspActivity"
@@ -110,6 +110,10 @@
         />
 
     <activity android:name=".rotation.RotationExampleActivity"
+        android:label="@string/rotation_rtmp"
+        android:screenOrientation="fullSensor"
+        />
+    <activity android:name=".MainStreamActivity"
         android:label="@string/rotation_rtmp"
         android:screenOrientation="fullSensor"
         />

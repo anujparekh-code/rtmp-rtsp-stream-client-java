@@ -238,7 +238,7 @@ open class CommandsManager {
       //end of response
       if (line?.length ?: 0 < 3) break
     }
-    Log.i(TAG, response)
+    Log.i(TAG, "response "+response)
     return if (method == Method.UNKNOWN) {
       commandParser.parseCommand(response)
     } else {

@@ -48,6 +48,7 @@ import com.pedro.encoder.input.video.CameraHelper;
 import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
+import com.pedro.rtplibrary.rtmp.RtmpCamera2;
 import com.pedro.rtpstreamer.R;
 import com.pedro.rtpstreamer.utils.PathUtils;
 
@@ -104,7 +105,7 @@ public class RtmpActivity extends AppCompatActivity
     tvBitrate = findViewById(R.id.tv_bitrate);
     etUrl = findViewById(R.id.et_rtp_url);
     etUrl.setHint(R.string.hint_rtmp);
-    etUrl.setText("rtmp://a.rtmp.youtube.com/live2/q30j-fjf0-tpza-kvxg-9vp5");
+    etUrl.setText("rtmp://a.rtmp.youtube.com/live2/4kxq-1b0z-9sfx-47rq-2xzd");
     bStartStop = findViewById(R.id.b_start_stop);
     bStartStop.setOnClickListener(this);
     bRecord = findViewById(R.id.b_record);

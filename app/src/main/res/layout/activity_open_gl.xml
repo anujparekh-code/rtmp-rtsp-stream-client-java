@@ -3,102 +3,99 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/activity_example_rtmp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    >
+    android:layout_height="match_parent">
 
-  <androidx.constraintlayout.widget.ConstraintLayout
-      android:id="@+id/cl_parent"
-      android:layout_width="match_parent"
-      android:layout_height="match_parent">
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/cl_parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:scaleType="matrix"
-        android:src="@drawable/icon_camera"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleType="matrix"
+            android:src="@drawable/icon_camera"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
 
-    <ImageView
-        android:id="@+id/image_view2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:scaleType="matrix"
-        android:src="@drawable/icon_microphone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <ImageView
+            android:id="@+id/image_view2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleType="matrix"
+            android:src="@drawable/icon_microphone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <WebView
         android:id="@+id/web_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#00000000"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.pedro.rtplibrary.view.OpenGlView
+        android:id="@+id/surfaceView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible"
+        app:AAEnabled="false"
+        app:aspectRatioMode="adjust"
+        app:isFlipHorizontal="false"
+        app:isFlipVertical="false"
+        app:keepAspectRatio="true"
+        app:numFilters="0" />
 
-  </androidx.constraintlayout.widget.ConstraintLayout>
-  <com.pedro.rtplibrary.view.OpenGlView
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:id="@+id/surfaceView"
-      app:keepAspectRatio="true"
-      app:aspectRatioMode="adjust"
-      app:AAEnabled="false"
-      app:numFilters="1"
-      app:isFlipHorizontal="false"
-      app:isFlipVertical="false"
-      />
+    <EditText
+        android:id="@+id/et_rtp_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:gravity="center"
+        android:inputType="textUri"
+        android:textColor="@color/appColor"
+        android:textColorHint="@color/appColor"
+        app:layout_constraintTop_toTopOf="parent" />
 
-  <EditText
-      android:textColor="@color/appColor"
-      android:textColorHint="@color/appColor"
-      android:inputType="textUri"
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:gravity="center"
-      android:layout_margin="20dp"
-      android:id="@+id/et_rtp_url"
-      app:layout_constraintTop_toTopOf="parent"
-      />
+    <Button
+        android:id="@+id/b_record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:text="@string/start_record"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/b_start_stop"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintStart_toStartOf="parent" />
 
-  <Button
-      android:text="@string/start_record"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:id="@+id/b_record"
-      app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintStart_toStartOf="parent"
-      app:layout_constraintEnd_toStartOf="@id/b_start_stop"
-      app:layout_constraintHorizontal_chainStyle="spread"
-      android:layout_marginBottom="20dp"
-      />
+    <Button
+        android:id="@+id/b_start_stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:text="@string/start_button"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/switch_camera"
+        app:layout_constraintStart_toEndOf="@id/b_record" />
 
-  <Button
-      android:text="@string/start_button"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:id="@+id/b_start_stop"
-      app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintStart_toEndOf="@id/b_record"
-      app:layout_constraintEnd_toStartOf="@id/switch_camera"
-      android:layout_marginBottom="20dp"
-      />
-
-  <Button
-      android:text="@string/switch_camera_button"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:id="@+id/switch_camera"
-      app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toEndOf="@id/b_start_stop"
-      android:layout_marginBottom="20dp"
-      />
+    <Button
+        android:id="@+id/switch_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:background="#00000000"
+        android:text="@string/switch_camera_button"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/b_start_stop" />
 </androidx.constraintlayout.widget.ConstraintLayout>

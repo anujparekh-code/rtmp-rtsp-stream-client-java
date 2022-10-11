@@ -16,12 +16,19 @@
 
 package com.pedro.rtpstreamer.openglexample;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
+import android.net.Uri;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Message;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -29,11 +36,21 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.CookieManager;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.pedro.encoder.input.gl.SpriteGestureController;
 import com.pedro.encoder.input.gl.render.filters.AnalogTVFilterRender;
 import com.pedro.encoder.input.gl.render.filters.AndroidViewFilterRender;
@@ -91,6 +108,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * More documentation see:
@@ -98,19 +117,22 @@ import java.util.Locale;
  * {@link com.pedro.rtplibrary.rtmp.RtmpCamera1}
  */
 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
-public class OpenGlRtmpActivity extends AppCompatActivity
-        implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback,
-        View.OnTouchListener {
+public class OpenGlRtmpActivity extends AppCompatActivity implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback, View.OnTouchListener {
 
     private RtmpCamera1 rtmpCamera1;
     private Button button;
     private Button bRecord;
     private EditText etUrl;
+    private WebView web_view;
 
     private String currentDateAndTime = "";
     private File folder;
     private OpenGlView openGlView;
     private SpriteGestureController spriteGestureController = new SpriteGestureController();
+    Context mContext;
+    private AlertDialog builder;
+    private Toast mToast;
+    WebView mWebviewPop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,9 +149,191 @@ public class OpenGlRtmpActivity extends AppCompatActivity
         switchCamera.setOnClickListener(this);
         etUrl = findViewById(R.id.et_rtp_url);
         etUrl.setHint(R.string.hint_rtmp);
+        web_view = findViewById(R.id.web_view);
+
+        web_view.getSettings().setJavaScriptEnabled(true);
+        WebSettings webSettings = web_view.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setAppCacheEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+//        webSettings.setSupportMultipleWindows(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLightTouchEnabled(true);
+        webSettings.setGeolocationEnabled(true);
+        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+        webSettings.setDomStorageEnabled(true);
+
+        //webSettings.setAllowContentAccess(true);
+        //webSettings.setAllowFileAccess(true);
+        //webSettings.setDatabaseEnabled(true);
+//        web_view.getSettings().setSavePassword(true);
+        web_view.getSettings().setSaveFormData(true);
+        web_view.setWebViewClient(new UriWebViewClient());
+//        web_view.setWebChromeClient(new UriChromeClient());
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(web_view, true);
+        }
+
+        try {
+            // load the url
+            web_view.loadUrl(
+                    "https://testing.cricheroes.in/live-video-scorecard-ios/1018752");///live-video-scorecard-ios/1018659
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        mContext = this.getApplicationContext();
+
         rtmpCamera1 = new RtmpCamera1(openGlView, this);
         openGlView.getHolder().addCallback(this);
         openGlView.setOnTouchListener(this);
+//        Timer myTimer = new Timer();
+//        myTimer.schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//                TimerMethod();
+//            }
+//
+//        }, 5000, 100000);
+
+    }
+
+    private void TimerMethod() {
+        //This method is called directly by the timer
+        //and runs in the same thread as the timer.
+
+        //We call the method that will work with the UI
+        //through the runOnUiThread method.
+        this.runOnUiThread(Timer_Tick);
+    }
+
+
+    private Runnable Timer_Tick = new Runnable() {
+        public void run() {
+
+            //This method runs in the same thread as the UI.
+
+            //Do something to the UI thread here
+            AndroidViewFilterRender androidViewFilterRender = new AndroidViewFilterRender();
+            androidViewFilterRender.setView(web_view);
+            rtmpCamera1.getGlInterface().addFilter(androidViewFilterRender);
+            androidViewFilterRender.setScale(100, 30);
+            androidViewFilterRender.setPosition(TranslateTo.BOTTOM);
+
+        }
+    };
+
+    private class UriWebViewClient extends WebViewClient {
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            String host = Uri.parse(url).getHost();
+            //Log.d("shouldOverrideUrlLoading", url);
+            Log.e("shouldOverrideUr", url);
+            return true;
+        }
+
+
+        @Override
+        public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+            Log.d("onReceivedSslError", "onReceivedSslError");
+            //super.onReceivedSslError(view, handler, error);
+        }
+
+    }
+
+    class UriChromeClient extends WebChromeClient {
+
+        @Override
+        public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+            Log.e("onCreateWindow ", resultMsg.toString());
+            mWebviewPop = new WebView(mContext);
+            mWebviewPop.setVerticalScrollBarEnabled(false);
+            mWebviewPop.setHorizontalScrollBarEnabled(false);
+            mWebviewPop.setWebViewClient(new UriWebViewClient());
+            mWebviewPop.setWebChromeClient(new UriChromeClient());
+            mWebviewPop.getSettings().setJavaScriptEnabled(true);
+            mWebviewPop.getSettings().setSavePassword(true);
+            mWebviewPop.getSettings().setSaveFormData(true);
+            // mWebviewPop.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            // create an AlertDialog.Builder
+            // the below did not give me .dismiss() method . See : https://stackoverflow.com/questions/14853325/how-to-dismiss-alertdialog-in-android
+
+            // AlertDialog.Builder builder;
+            // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            //     builder = new AlertDialog.Builder(MainActivity.this, android.R.style.Theme_Material_Dialog_Alert);
+            // } else {
+            //     builder = new AlertDialog.Builder(MainActivity.this);
+            // }
+
+            // set the WebView as the AlertDialog.Builder’s view
+
+            builder = new AlertDialog.Builder(mContext, AlertDialog.THEME_DEVICE_DEFAULT_LIGHT).create();
+            builder.setTitle("");
+            builder.setView(mWebviewPop);
+            builder.setButton("Close", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int id) {
+                    mWebviewPop.destroy();
+                    dialog.dismiss();
+                }
+            });
+
+            builder.show();
+            builder.getWindow().clearFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+
+            CookieManager cookieManager = CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                cookieManager.setAcceptThirdPartyCookies(mWebviewPop, true);
+            }
+
+            WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+            transport.setWebView(mWebviewPop);
+            resultMsg.sendToTarget();
+            return true;
+        }
+
+        @Override
+        public void onCloseWindow(WebView window) {
+            //Toast.makeText(mContext,"onCloseWindow called",Toast.LENGTH_SHORT).show();
+            try {
+                mWebviewPop.destroy();
+            } catch (Exception e) {
+                // TODO: Write an exception handler to notify user
+            }
+
+            try {
+                builder.dismiss();
+            } catch (Exception e) {
+                // TODO: Write an exception handler to notify user
+            }
+        }
+
+        @Override
+        public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+            Log.e("onJsAlert ", url);
+            return super.onJsAlert(view, url, message, result);
+        }
+
+        @Override
+        public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+            Log.e("onJsConfirm ", url);
+            return super.onJsConfirm(view, url, message, result);
+        }
+
+        @Override
+        public boolean onJsPrompt(WebView view, String url, String message, String defaultValue,
+                JsPromptResult result) {
+            Log.e("onJsPrompt ", url);
+            return super.onJsPrompt(view, url, message, defaultValue, result);
+
+        }
     }
 
     @Override
@@ -141,12 +345,11 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         //Stop listener for image, text and gif stream objects.
-        spriteGestureController.stopListener();
+//        spriteGestureController.stopListener();
         switch (item.getItemId()) {
             case R.id.e_d_fxaa:
                 rtmpCamera1.getGlInterface().enableAA(!rtmpCamera1.getGlInterface().isAAEnabled());
-                Toast.makeText(this,
-                        "FXAA " + (rtmpCamera1.getGlInterface().isAAEnabled() ? "enabled" : "disabled"),
+                Toast.makeText(this, "FXAA " + (rtmpCamera1.getGlInterface().isAAEnabled() ? "enabled" : "disabled"),
                         Toast.LENGTH_SHORT).show();
                 return true;
             //filters. NOTE: You can change filter values on fly without reset the filter.
@@ -162,8 +365,10 @@ public class OpenGlRtmpActivity extends AppCompatActivity
                 return true;
             case R.id.android_view:
                 AndroidViewFilterRender androidViewFilterRender = new AndroidViewFilterRender();
-                androidViewFilterRender.setView(findViewById(R.id.switch_camera));
-                rtmpCamera1.getGlInterface().setFilter(androidViewFilterRender);
+                androidViewFilterRender.setView(findViewById(R.id.web_view));
+                rtmpCamera1.getGlInterface().addFilter(androidViewFilterRender);
+//                androidViewFilterRender.setScale(100, 30);
+                androidViewFilterRender.setPosition(TranslateTo.BOTTOM);
                 return true;
             case R.id.basic_deformation:
                 rtmpCamera1.getGlInterface().setFilter(new BasicDeformationFilterRender());
@@ -281,13 +486,13 @@ public class OpenGlRtmpActivity extends AppCompatActivity
                 rtmpCamera1.getGlInterface().setFilter(new SwirlFilterRender());
                 return true;
             case R.id.surface_filter:
-                SurfaceFilterRender surfaceFilterRender =
-                        new SurfaceFilterRender(new SurfaceFilterRender.SurfaceReadyCallback() {
+                SurfaceFilterRender surfaceFilterRender = new SurfaceFilterRender(
+                        new SurfaceFilterRender.SurfaceReadyCallback() {
                             @Override
                             public void surfaceReady(SurfaceTexture surfaceTexture) {
                                 //You can render this filter with other api that draw in a surface. for example you can use VLC
-                                MediaPlayer mediaPlayer =
-                                        MediaPlayer.create(OpenGlRtmpActivity.this, R.raw.big_bunny_240p);
+                                MediaPlayer mediaPlayer = MediaPlayer.create(OpenGlRtmpActivity.this,
+                                        R.raw.big_bunny_240p);
                                 mediaPlayer.setSurface(new Surface(surfaceTexture));
                                 mediaPlayer.start();
                             }
@@ -313,10 +518,9 @@ public class OpenGlRtmpActivity extends AppCompatActivity
 
     private void setTextToStream() {
         TextObjectFilterRender textObjectFilterRender = new TextObjectFilterRender();
-        rtmpCamera1.getGlInterface().setFilter(textObjectFilterRender);
+        rtmpCamera1.getGlInterface().addFilter(textObjectFilterRender);
         textObjectFilterRender.setText("Hello world", 22, Color.RED);
-        textObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(),
-                rtmpCamera1.getStreamHeight());
+        textObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(), rtmpCamera1.getStreamHeight());
         textObjectFilterRender.setPosition(TranslateTo.CENTER);
         spriteGestureController.setBaseObjectFilterRender(textObjectFilterRender); //Optional
     }
@@ -324,10 +528,8 @@ public class OpenGlRtmpActivity extends AppCompatActivity
     private void setImageToStream() {
         ImageObjectFilterRender imageObjectFilterRender = new ImageObjectFilterRender();
         rtmpCamera1.getGlInterface().setFilter(imageObjectFilterRender);
-        imageObjectFilterRender.setImage(
-                BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
-        imageObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(),
-                rtmpCamera1.getStreamHeight());
+        imageObjectFilterRender.setImage(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher));
+        imageObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(), rtmpCamera1.getStreamHeight());
         imageObjectFilterRender.setPosition(TranslateTo.RIGHT);
         spriteGestureController.setBaseObjectFilterRender(imageObjectFilterRender); //Optional
         spriteGestureController.setPreventMoveOutside(false); //Optional
@@ -338,8 +540,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
             GifObjectFilterRender gifObjectFilterRender = new GifObjectFilterRender();
             gifObjectFilterRender.setGif(getResources().openRawResource(R.raw.banana));
             rtmpCamera1.getGlInterface().setFilter(gifObjectFilterRender);
-            gifObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(),
-                    rtmpCamera1.getStreamHeight());
+            gifObjectFilterRender.setDefaultScale(rtmpCamera1.getStreamWidth(), rtmpCamera1.getStreamHeight());
             gifObjectFilterRender.setPosition(TranslateTo.BOTTOM);
             spriteGestureController.setBaseObjectFilterRender(gifObjectFilterRender); //Optional
         } catch (IOException e) {
@@ -366,8 +567,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(OpenGlRtmpActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(OpenGlRtmpActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT).show();
                 rtmpCamera1.stopStream();
                 button.setText(R.string.start_button);
             }
@@ -414,8 +614,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
         switch (view.getId()) {
             case R.id.b_start_stop:
                 if (!rtmpCamera1.isStreaming()) {
-                    if (rtmpCamera1.isRecording()
-                            || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+                    if (rtmpCamera1.isRecording() || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
                         button.setText(R.string.stop_button);
                         rtmpCamera1.startStream(etUrl.getText().toString());
                     } else {
@@ -444,8 +643,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
                         currentDateAndTime = sdf.format(new Date());
                         if (!rtmpCamera1.isStreaming()) {
                             if (rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
-                                rtmpCamera1.startRecord(
-                                        folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                                rtmpCamera1.startRecord(folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
                                 bRecord.setText(R.string.stop_record);
                                 Toast.makeText(this, "Recording... ", Toast.LENGTH_SHORT).show();
                             } else {
@@ -467,8 +665,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
                     rtmpCamera1.stopRecord();
                     PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
                     bRecord.setText(R.string.start_record);
-                    Toast.makeText(this,
-                            "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+                    Toast.makeText(this, "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
                             Toast.LENGTH_SHORT).show();
                     currentDateAndTime = "";
                 }
@@ -494,8 +691,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity
             rtmpCamera1.stopRecord();
             PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
             bRecord.setText(R.string.start_record);
-            Toast.makeText(this,
-                    "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+            Toast.makeText(this, "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
                     Toast.LENGTH_SHORT).show();
             currentDateAndTime = "";
         }
@@ -508,11 +704,11 @@ public class OpenGlRtmpActivity extends AppCompatActivity
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
-        if (spriteGestureController.spriteTouched(view, motionEvent)) {
-            spriteGestureController.moveSprite(view, motionEvent);
-            spriteGestureController.scaleSprite(motionEvent);
-            return true;
-        }
+//        if (spriteGestureController.spriteTouched(view, motionEvent)) {
+//            spriteGestureController.moveSprite(view, motionEvent);
+//            spriteGestureController.scaleSprite(motionEvent);
+//            return true;
+//        }
         return false;
     }
 }
