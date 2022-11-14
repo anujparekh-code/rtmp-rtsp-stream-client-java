@@ -14,23 +14,35 @@
  * limitations under the License.
  */
 
-package com.pedro.rtmp.rtmp.message.data
+package com.pedro.rtmp.amf.v0
 
-import com.pedro.rtmp.rtmp.message.BasicHeader
-import com.pedro.rtmp.rtmp.message.RtmpMessage
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import kotlin.jvm.Throws
 
 /**
- * Created by pedro on 21/04/21.
+ * Created by pedro on 19/07/22.
+ *
+ * Contain an empty body
  */
-abstract class Data(timeStamp: Int, streamId: Int, basicHeader: BasicHeader): RtmpMessage(basicHeader) {
+class AmfUnsupported: AmfData() {
 
-  protected var bodySize = 0
-
-  init {
-    header.messageLength = bodySize
-    header.timeStamp = timeStamp
-    header.messageStreamId = streamId
+  @Throws(IOException::class)
+  override fun readBody(input: InputStream) {
+    //no body to read
   }
 
-  override fun getSize(): Int = bodySize
+  @Throws(IOException::class)
+  override fun writeBody(output: OutputStream) {
+    //no body to write
+  }
+
+  override fun getType(): AmfType = AmfType.UNSUPPORTED
+
+  override fun getSize(): Int = 0
+
+  override fun toString(): String {
+    return "AmfUnsupported"
+  }
 }
