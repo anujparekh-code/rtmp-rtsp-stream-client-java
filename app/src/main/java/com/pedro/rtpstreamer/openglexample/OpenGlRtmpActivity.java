@@ -154,7 +154,7 @@ public class OpenGlRtmpActivity extends AppCompatActivity implements ConnectChec
         web_view.getSettings().setJavaScriptEnabled(true);
         WebSettings webSettings = web_view.getSettings();
         webSettings.setJavaScriptEnabled(true);
-        webSettings.setAppCacheEnabled(true);
+//        webSettings.setAppCacheEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
 //        webSettings.setSupportMultipleWindows(true);
         webSettings.setLoadWithOverviewMode(true);
