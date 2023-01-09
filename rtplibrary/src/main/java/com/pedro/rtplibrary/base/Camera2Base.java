@@ -17,6 +17,7 @@
 package com.pedro.rtplibrary.base;
 
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.Point;
 import android.hardware.camera2.CameraCharacteristics;
 import android.media.MediaCodec;
@@ -542,7 +543,7 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
         glInterface.setFps(videoEncoder.getFps());
         glInterface.start();
         cameraManager.prepareCamera(glInterface.getSurfaceTexture(), width, height,
-            videoEncoder.getFps());
+            videoEncoder.getFps(), cameraId);
       }
       cameraManager.openCameraId(cameraId);
       onPreview = true;
@@ -1023,6 +1024,21 @@ public abstract class Camera2Base implements GetAacData, GetVideoData, GetMicrop
     return recordController.getStatus();
   }
 
+  public void addImageListener(int width, int height, int format, int maxImages, Camera2ApiManager.ImageCallback listener) {
+    cameraManager.addImageListener(width, height, format, maxImages, listener);
+  }
+
+  public void addImageListener(int format, int maxImages, Camera2ApiManager.ImageCallback listener) {
+    if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
+      addImageListener(videoEncoder.getHeight(), videoEncoder.getWidth(), format, maxImages, listener);
+    } else {
+      addImageListener(videoEncoder.getWidth(), videoEncoder.getHeight(), format, maxImages, listener);
+    }
+  }
+
+  public void removeImageListener() {
+    cameraManager.removeImageListener();
+  }
   /**
    * Get preview state.
    *

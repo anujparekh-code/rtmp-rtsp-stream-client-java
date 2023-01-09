@@ -32,6 +32,8 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -100,11 +102,16 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     void onGetFaces(Face[] faces, Rect scaleSensor, int sensorOrientation);
   }
 
+  public interface ImageCallback {
+    void onImageAvailable(Image image);
+  }
+
   private int sensorOrientation = 0;
   private Rect faceSensorScale;
   private FaceDetectorCallback faceDetectorCallback;
   private boolean faceDetectionEnabled = false;
   private int faceDetectionMode;
+  private ImageReader imageReader;
 
   public Camera2ApiManager(Context context) {
     cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
@@ -131,10 +138,22 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
   }
 
   public void prepareCamera(SurfaceTexture surfaceTexture, int width, int height, int fps) {
-    surfaceTexture.setDefaultBufferSize(width, height);
+    Size optimalResolution = Camera2ResolutionCalculator.INSTANCE.getOptimalResolution(new Size(width, height), getCameraResolutions(facing));
+    Log.i(TAG, "optimal resolution set to: " + optimalResolution.getWidth() + "x" + optimalResolution.getHeight());
+    surfaceTexture.setDefaultBufferSize(optimalResolution.getWidth(), optimalResolution.getHeight());
     this.surfaceEncoder = new Surface(surfaceTexture);
     this.fps = fps;
     prepared = true;
+  }
+
+  public void prepareCamera(SurfaceTexture surfaceTexture, int width, int height, int fps, Facing facing) {
+    this.facing = facing;
+    prepareCamera(surfaceTexture, width, height, fps);
+  }
+
+  public void prepareCamera(SurfaceTexture surfaceTexture, int width, int height, int fps, String cameraId) {
+    this.facing = getFacingByCameraId(cameraManager, cameraId);
+    prepareCamera(surfaceTexture, width, height, fps);
   }
 
   public boolean isPrepared() {
@@ -147,7 +166,7 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
       Surface preview = addPreviewSurface();
       if (preview != null) listSurfaces.add(preview);
       if (surfaceEncoder != preview && surfaceEncoder != null) listSurfaces.add(surfaceEncoder);
-
+      if (imageReader != null) listSurfaces.add(imageReader.getSurface());
       cameraDevice.createCaptureSession(listSurfaces, new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
@@ -986,6 +1005,52 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
     running = false;
   }
 
+  public void addImageListener(int width, int height, int format, int maxImages, ImageCallback listener) {
+    boolean wasRunning = running;
+    closeCamera(false);
+    if (wasRunning) closeCamera(false);
+    if (imageReader != null) removeImageListener();
+    HandlerThread imageThread = new HandlerThread(TAG + " imageThread");
+    imageThread.start();
+    imageReader = ImageReader.newInstance(width, height, format, maxImages);
+    imageReader.setOnImageAvailableListener(reader -> {
+      Image image = reader.acquireLatestImage();
+      if (image != null) {
+        listener.onImageAvailable(image);
+        image.close();
+      }
+    }, new Handler(imageThread.getLooper()));
+    if (wasRunning) {
+      if (textureView != null) {
+        prepareCamera(textureView, surfaceEncoder, fps);
+      } else if (surfaceView != null) {
+        prepareCamera(surfaceView, surfaceEncoder, fps);
+      } else {
+        prepareCamera(surfaceEncoder, fps);
+      }
+      openLastCamera();
+    }
+  }
+
+  public void removeImageListener() {
+    boolean wasRunning = running;
+    if (wasRunning) closeCamera(false);
+    if (imageReader != null) {
+      imageReader.close();
+      imageReader = null;
+    }
+    if (wasRunning) {
+      if (textureView != null) {
+        prepareCamera(textureView, surfaceEncoder, fps);
+      } else if (surfaceView != null) {
+        prepareCamera(surfaceView, surfaceEncoder, fps);
+      } else {
+        prepareCamera(surfaceEncoder, fps);
+      }
+      openLastCamera();
+    }
+  }
+
   @Override
   public void onOpened(@NonNull CameraDevice cameraDevice) {
     this.cameraDevice = cameraDevice;
@@ -1023,6 +1088,21 @@ public class Camera2ApiManager extends CameraDevice.StateCallback {
       }
     }
     return null;
+  }
+
+  private Facing getFacingByCameraId(CameraManager cameraManager, String cameraId) {
+    try {
+      for (String id : cameraManager.getCameraIdList()) {
+        if (id.equals(cameraId)) {
+          Integer cameraFacing = cameraManager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.LENS_FACING);
+          if (cameraFacing == CameraMetadata.LENS_FACING_BACK) return Facing.BACK;
+          else return Facing.FRONT;
+        }
+      }
+      return Facing.BACK;
+    } catch (CameraAccessException e) {
+      return Facing.BACK;
+    }
   }
 
   @Nullable

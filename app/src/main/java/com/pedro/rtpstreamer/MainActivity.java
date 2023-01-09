@@ -24,9 +24,9 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -60,28 +60,45 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
 
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
 
-    private GridView list;
-    private List<ActivityLink> activities;
+  private GridView list;
+  private List<ActivityLink> activities;
 
-    private final String[] PERMISSIONS = {Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+  private final String[] PERMISSIONS = {
+      Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA,
+      Manifest.permission.WRITE_EXTERNAL_STORAGE
+  };
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
-        TextView tvVersion = findViewById(R.id.tv_version);
-        tvVersion.setText(getString(R.string.version, BuildConfig.VERSION_NAME));
+  @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+  private final String[] PERMISSIONS_A_13 = {
+          Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA,
+          Manifest.permission.POST_NOTIFICATIONS
+  };
 
-        list = findViewById(R.id.list);
-        createList();
-        setListAdapter(activities);
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+    overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
+    TextView tvVersion = findViewById(R.id.tv_version);
+    tvVersion.setText(getString(R.string.version, BuildConfig.VERSION_NAME));
 
-        if (!hasPermissions(this, PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, 1);
-        }
+    list = findViewById(R.id.list);
+    createList();
+    setListAdapter(activities);
+    requestPermissions();
+
+  }
+  private void requestPermissions() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (!hasPermissions(this)) {
+        ActivityCompat.requestPermissions(this, PERMISSIONS_A_13, 1);
+      }
+    } else {
+      if (!hasPermissions(this)) {
+        ActivityCompat.requestPermissions(this, PERMISSIONS, 1);
+      }
     }
-
+  }
     @SuppressLint("NewApi")
     private void createList() {
         activities = new ArrayList<>();
@@ -134,21 +151,21 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         list.setOnItemClickListener(this);
     }
 
-    @Override
-    public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-        if (hasPermissions(this, PERMISSIONS)) {
-            ActivityLink link = activities.get(i);
-            int minSdk = link.getMinSdk();
-            if (Build.VERSION.SDK_INT >= minSdk) {
-                startActivity(link.getIntent());
-                overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
-            } else {
-                showMinSdkError(minSdk);
-            }
-        } else {
-            showPermissionsErrorAndRequest();
-        }
+  @Override
+  public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+    if (hasPermissions(this)) {
+      ActivityLink link = activities.get(i);
+      int minSdk = link.getMinSdk();
+      if (Build.VERSION.SDK_INT >= minSdk) {
+        startActivity(link.getIntent());
+        overridePendingTransition(R.transition.slide_in, R.transition.slide_out);
+      } else {
+        showMinSdkError(minSdk);
+      }
+    } else {
+      showPermissionsErrorAndRequest();
     }
+  }
 
     private void showMinSdkError(int minSdk) {
         String named;
@@ -166,10 +183,18 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         Toast.makeText(this, "You need min Android " + named + " (API " + minSdk + " )", Toast.LENGTH_SHORT).show();
     }
 
-    private void showPermissionsErrorAndRequest() {
-        Toast.makeText(this, "You need permissions before", Toast.LENGTH_SHORT).show();
-        ActivityCompat.requestPermissions(this, PERMISSIONS, 1);
+  private void showPermissionsErrorAndRequest() {
+    Toast.makeText(this, "You need permissions before", Toast.LENGTH_SHORT).show();
+    requestPermissions();
+  }
+
+  private boolean hasPermissions(Context context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      return hasPermissions(context, PERMISSIONS_A_13);
+    } else {
+      return hasPermissions(context, PERMISSIONS);
     }
+  }
 
     private boolean hasPermissions(Context context, String... permissions) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {

@@ -11,6 +11,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+  <!--needed by background Rtp service to keep service alive-->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <!--Optional for play store-->
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <!--needed by background Rtp service to keep service alive-->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
@@ -95,7 +101,9 @@
             android:screenOrientation="portrait" />
         <activity
             android:name=".backgroundexample.BackgroundActivity"
-            android:label="@string/service_rtp" />
+            android:label="@string/service_rtp"
+            android:screenOrientation="portrait"
+        />
 
         <activity
             android:name=".rotation.RotationExampleActivity"

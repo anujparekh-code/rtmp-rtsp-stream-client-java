@@ -79,7 +79,6 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
 
   protected boolean videoEnabled = false;
   private boolean audioEnabled = false;
-  private final Object sync = new Object();
   private AudioTrack audioTrackPlayer;
 
   public FromFileBase(VideoDecoderInterface videoDecoderInterface,
@@ -145,6 +144,39 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
   public boolean prepareVideo(String filePath, int bitRate, int rotation, int avcProfile,
       int avcProfileLevel) throws IOException {
     if (!videoDecoder.initExtractor(filePath)) return false;
+    return finishPrepareVideo(bitRate, rotation, avcProfile, avcProfileLevel);
+  }
+
+  /**
+   * @param fileDescriptor to video MP4 file.
+   * @param bitRate H264 in bps.
+   * @return true if success, false if you get a error (Normally because the encoder selected
+   * doesn't support any configuration seated or your device hasn't a H264 encoder).
+   * @throws IOException Normally file not found.
+   */
+  public boolean prepareVideo(FileDescriptor fileDescriptor, int bitRate, int rotation, int avcProfile,
+      int avcProfileLevel) throws IOException {
+    if (!videoDecoder.initExtractor(fileDescriptor)) return false;
+    return finishPrepareVideo(bitRate, rotation, avcProfile, avcProfileLevel);
+  }
+
+  public boolean prepareVideo(String filePath, int bitRate, int rotation) throws IOException {
+    return prepareVideo(filePath, bitRate, rotation, -1, -1);
+  }
+
+  public boolean prepareVideo(FileDescriptor fileDescriptor, int bitRate, int rotation) throws IOException {
+    return prepareVideo(fileDescriptor, bitRate, rotation, -1, -1);
+  }
+
+  public boolean prepareVideo(String filePath) throws IOException {
+    return prepareVideo(filePath, 1200 * 1024, 0);
+  }
+
+  public boolean prepareVideo(FileDescriptor fileDescriptor) throws IOException {
+    return prepareVideo(fileDescriptor, 1200 * 1024, 0);
+  }
+
+  private boolean finishPrepareVideo(int bitRate, int rotation, int avcProfile,  int avcProfileLevel) {
     boolean result =
         videoEncoder.prepareVideoEncoder(videoDecoder.getWidth(), videoDecoder.getHeight(), videoDecoder.getFps(),
             bitRate, rotation, 2, FormatVideoEncoder.SURFACE, avcProfile, avcProfileLevel);
@@ -154,16 +186,8 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
     return result;
   }
 
-  public boolean prepareVideo(String filePath, int bitRate, int rotation) throws IOException {
-    return prepareVideo(filePath, bitRate, rotation, -1, -1);
-  }
-
-  public boolean prepareVideo(String filePath) throws IOException {
-    return prepareVideo(filePath, 1200 * 1024, 0);
-  }
-
   /**
-   * @param filePath to video MP4 file.
+   * @param filePath to audio file.
    * @param bitRate AAC in kb.
    * @return true if success, false if you get a error (Normally because the encoder selected
    * doesn't support any configuration seated or your device hasn't a H264 encoder).
@@ -171,6 +195,22 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
    */
   public boolean prepareAudio(String filePath, int bitRate) throws IOException {
     if (!audioDecoder.initExtractor(filePath)) return false;
+    return finishPrepareAudio(bitRate);
+  }
+
+  /**
+   * @param fileDescriptor to audio file.
+   * @param bitRate AAC in kb.
+   * @return true if success, false if you get a error (Normally because the encoder selected
+   * doesn't support any configuration seated or your device hasn't a H264 encoder).
+   * @throws IOException Normally file not found.
+   */
+  public boolean prepareAudio(FileDescriptor fileDescriptor, int bitRate) throws IOException {
+    if (!audioDecoder.initExtractor(fileDescriptor)) return false;
+    return finishPrepareAudio(bitRate);
+  }
+
+  private boolean finishPrepareAudio(int bitRate) {
     audioDecoder.prepareAudio();
     boolean result = audioEncoder.prepareAudioEncoder(bitRate, audioDecoder.getSampleRate(),
         audioDecoder.isStereo(), audioDecoder.getOutsize());
@@ -302,9 +342,7 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
   }
 
   public void replaceView(Context context) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-      replaceGlInterface(new OffScreenGlThread(context));
-    }
+    replaceGlInterface(new OffScreenGlThread(context));
   }
 
   public void replaceView(OpenGlView openGlView) {
@@ -319,14 +357,15 @@ public abstract class FromFileBase implements GetVideoData, GetAacData, GetMicro
    * Replace glInterface used on fly. Ignored if you use SurfaceView or TextureView
    */
   private void replaceGlInterface(GlInterface glInterface) {
-    if (this.glInterface != null && Build.VERSION.SDK_INT >= 18 && videoEnabled) {
+    if (this.glInterface != null && videoEnabled) {
       if (isStreaming() || isRecording()) {
+        videoDecoder.pauseRender();
         this.glInterface.removeMediaCodecSurface();
         this.glInterface.stop();
         this.glInterface = glInterface;
         this.glInterface.init();
         prepareGlView();
-        videoDecoder.changeOutputSurface(this.glInterface.getSurface());
+        videoDecoder.resumeRender();
       } else {
         this.glInterface = glInterface;
         this.glInterface.init();
