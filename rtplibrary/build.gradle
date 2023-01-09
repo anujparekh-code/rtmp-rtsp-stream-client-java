@@ -44,8 +44,8 @@ dependencies {
   api project(':encoder')
   api project(':rtmp')
   api project(':rtsp')
-  implementation project(':libuvccamera')
-  implementation project(':usbCameraCommon')
+  api project(':libuvccamera')
+  api project(':usbCameraCommon')
 //  implementation group: 'com.serenegiant.uvccamera', name: 'libuvccamera', version: '1.2.0'
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
   implementation("com.serenegiant:common:2.12.4")
