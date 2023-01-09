@@ -38,7 +38,7 @@ android {
     defaultConfig {
         minSdkVersion 19
 		targetSdkVersion versionTarget
-		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+//		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 		ndk {
 			abiFilters "armeabi-v7a", "x86"
 		}
