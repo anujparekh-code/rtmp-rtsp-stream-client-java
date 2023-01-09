@@ -267,17 +267,7 @@ public class AndroidViewFilterRender extends BaseFilterRender {
           canvas.scale(canvasScale.x, canvasScale.y);
           canvas.rotate(rotation, rotationAxis.x, rotationAxis.y);
           try {
-            view.draw(canvas);
-            if (status == Status.RENDER1) {
-              surface.unlockCanvasAndPost(canvas);
-              renderingStatus = Status.DONE1;
-            } else {
-              surface2.unlockCanvasAndPost(canvas);
-              renderingStatus = Status.DONE2;
-            }
-            //Sometimes draw could crash if you don't use main thread. Ensuring you can render always
-          } catch (Exception e) {
-            mainHandler.post(() -> {
+            if (view!=null) {
               view.draw(canvas);
               if (status == Status.RENDER1) {
                 surface.unlockCanvasAndPost(canvas);
@@ -285,6 +275,20 @@ public class AndroidViewFilterRender extends BaseFilterRender {
               } else {
                 surface2.unlockCanvasAndPost(canvas);
                 renderingStatus = Status.DONE2;
+              }
+            }
+            //Sometimes draw could crash if you don't use main thread. Ensuring you can render always
+          } catch (Exception e) {
+            mainHandler.post(() -> {
+              if (view!=null) {
+                view.draw(canvas);
+                if (status == Status.RENDER1) {
+                  surface.unlockCanvasAndPost(canvas);
+                  renderingStatus = Status.DONE1;
+                } else {
+                  surface2.unlockCanvasAndPost(canvas);
+                  renderingStatus = Status.DONE2;
+                }
               }
             });
           }
