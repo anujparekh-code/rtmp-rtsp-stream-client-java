@@ -2,7 +2,7 @@
 
 buildscript {
   ext.kotlin_version = '1.7.20'
-  ext.library_group = "com.github.pedroSG94"
+  ext.library_group = "com.github.chiragsudani"
   ext.version_code = 222
   ext.version_name = "2.2.2"
 
