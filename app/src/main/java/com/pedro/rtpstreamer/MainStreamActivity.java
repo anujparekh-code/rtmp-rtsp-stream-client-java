@@ -41,7 +41,6 @@ import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpUSB;
 import com.pedro.rtplibrary.view.AspectRatioMode;
 import com.pedro.rtplibrary.view.OpenGlView;
-import com.pedro.rtplibrary.widget.SimpleUVCCameraTextureView;
 import com.serenegiant.common.BaseActivity;
 import com.serenegiant.usb.CameraDialog;
 import com.serenegiant.usb.IButtonCallback;
@@ -64,8 +63,8 @@ public final class MainStreamActivity extends BaseActivity implements CameraDial
     private Surface mPreviewSurface;
 
     private boolean isUsbOpen = true;
-    private int width = 1280;
-    private int height = 720;
+    private int width = 1920;
+    private int height = 1080;
     private boolean defished = false;
     private RtmpUSB rtmpUSB;
     OpenGlView openglview;
@@ -90,7 +89,7 @@ public final class MainStreamActivity extends BaseActivity implements CameraDial
             public void onClick(View view) {
                 if (mUVCCamera != null) {
                     if (!rtmpUSB.isStreaming()) {
-                        startStream("rtmp://a.rtmp.youtube.com/live2/awrg-bcbx-3p7h-b69k-e63v");
+                        startStream("rtmp://a.rtmp.youtube.com/live2/byr2-hq4k-sw3j-x9t1-7qjx");
                         start_stop.setText("Stop stream");
                     } else {
                         rtmpUSB.stopStream(mUVCCamera);

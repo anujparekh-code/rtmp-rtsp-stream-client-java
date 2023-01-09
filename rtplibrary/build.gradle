@@ -18,27 +18,27 @@ android {
     }
   }
 
-//  publishing {
-//    singleVariant("release")
-//  }
+  publishing {
+    singleVariant("release")
+  }
 }
 
-//afterEvaluate {
-//  publishing {
-//    publications {
-//      // Creates a Maven publication called "release".
-//      release(MavenPublication) {
-//        // Applies the component for the release build variant.
-//        from components.release
-//
-//        // You can then customize attributes of the publication as shown below.
-//        groupId = "$library_group"
-//        artifactId = "rtplibrary"
-//        version = "$version_name"
-//      }
-//    }
-//  }
-//}
+afterEvaluate {
+  publishing {
+    publications {
+      // Creates a Maven publication called "release".
+      release(MavenPublication) {
+        // Applies the component for the release build variant.
+        from components.release
+
+        // You can then customize attributes of the publication as shown below.
+        groupId = "$library_group"
+        artifactId = "rtplibrary"
+        version = "$version_name"
+      }
+    }
+  }
+}
 
 dependencies {
   api project(':encoder')
@@ -48,5 +48,6 @@ dependencies {
   implementation project(':usbCameraCommon')
 //  implementation group: 'com.serenegiant.uvccamera', name: 'libuvccamera', version: '1.2.0'
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+  implementation("com.serenegiant:common:2.12.4")
 
 }

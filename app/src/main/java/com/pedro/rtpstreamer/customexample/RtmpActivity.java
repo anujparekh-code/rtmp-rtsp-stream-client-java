@@ -105,7 +105,7 @@ public class RtmpActivity extends AppCompatActivity
     tvBitrate = findViewById(R.id.tv_bitrate);
     etUrl = findViewById(R.id.et_rtp_url);
     etUrl.setHint(R.string.hint_rtmp);
-    etUrl.setText("rtmp://a.rtmp.youtube.com/live2/4kxq-1b0z-9sfx-47rq-2xzd");
+    etUrl.setText("rtmp://a.rtmp.youtube.com/live2/53ae-x38d-w725-btah-5qub");
     bStartStop = findViewById(R.id.b_start_stop);
     bStartStop.setOnClickListener(this);
     bRecord = findViewById(R.id.b_record);

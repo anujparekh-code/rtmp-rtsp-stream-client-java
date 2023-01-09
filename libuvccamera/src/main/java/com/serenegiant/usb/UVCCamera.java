@@ -44,8 +44,8 @@ public class UVCCamera {
 	private static final String TAG = UVCCamera.class.getSimpleName();
 	private static final String DEFAULT_USBFS = "/dev/bus/usb";
 
-	public static final int DEFAULT_PREVIEW_WIDTH = 640;
-	public static final int DEFAULT_PREVIEW_HEIGHT = 480;
+	public static final int DEFAULT_PREVIEW_WIDTH = 1280;
+	public static final int DEFAULT_PREVIEW_HEIGHT = 720;
 	public static final int DEFAULT_PREVIEW_MODE = 0;
 	public static final int DEFAULT_PREVIEW_MIN_FPS = 1;
 	public static final int DEFAULT_PREVIEW_MAX_FPS = 30;
@@ -324,6 +324,7 @@ public class UVCCamera {
 			throw new IllegalArgumentException("invalid preview size");
 		if (mNativePtr != 0) {
 			final int result = nativeSetPreviewSize(mNativePtr, width, height, min_fps, max_fps, frameFormat, bandwidthFactor);
+			Log.e("setPreviewSize result ","IS "+result);
 			if (result != 0)
 				throw new IllegalArgumentException("Failed to set preview size");
 			mCurrentFrameFormat = frameFormat;
@@ -424,7 +425,7 @@ public class UVCCamera {
      * stop preview
      */
     public synchronized void stopPreview() {
-    	setFrameCallback(null, 0);
+    	setFrameCallback(null, PIXEL_FORMAT_RGBX);
     	if (mCtrlBlock != null) {
     		nativeStopPreview(mNativePtr);
     	}

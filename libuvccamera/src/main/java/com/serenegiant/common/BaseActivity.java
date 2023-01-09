@@ -29,7 +29,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-
 import android.util.Log;
 import android.widget.Toast;
 
@@ -37,6 +36,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.serenegiant.dialog.MessageDialogFragmentV4;
 import com.serenegiant.utils.BuildCheck;
 import com.serenegiant.utils.HandlerThreadHandler;
 import com.serenegiant.utils.PermissionCheck;
@@ -46,9 +46,9 @@ import com.serenegiant.utils.PermissionCheck;
  *
  */
 public class BaseActivity extends AppCompatActivity
-	implements MessageDialogFragment.MessageDialogListener {
+	implements MessageDialogFragmentV4.MessageDialogListener {
 
-	private static boolean DEBUG = true;	// FIXME 実働時はfalseにセットすること
+	private static boolean DEBUG = false;	// FIXME 実働時はfalseにセットすること
 	private static final String TAG = BaseActivity.class.getSimpleName();
 
 	/** UI操作のためのHandler */
@@ -215,7 +215,7 @@ public class BaseActivity extends AppCompatActivity
 	 */
 	@SuppressLint("NewApi")
 	@Override
-	public void onMessageDialogResult(final MessageDialogFragment dialog, final int requestCode, final String[] permissions, final boolean result) {
+	public void onMessageDialogResult(final MessageDialogFragmentV4 dialog, final int requestCode, final String[] permissions, final boolean result) {
 		if (result) {
 			// メッセージダイアログでOKを押された時はパーミッション要求する
 			if (BuildCheck.isMarshmallow()) {
@@ -279,7 +279,7 @@ public class BaseActivity extends AppCompatActivity
 	 */
 	protected boolean checkPermissionWriteExternalStorage() {
 		if (!PermissionCheck.hasWriteExternalStorage(this)) {
-			MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE,
+			MessageDialogFragmentV4.showDialog(this, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE,
 				R.string.permission_title, R.string.permission_ext_storage_request,
 				new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE});
 			return false;
@@ -294,7 +294,7 @@ public class BaseActivity extends AppCompatActivity
 	 */
 	protected boolean checkPermissionAudio() {
 		if (!PermissionCheck.hasAudio(this)) {
-			MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_AUDIO_RECORDING,
+			MessageDialogFragmentV4.showDialog(this, REQUEST_PERMISSION_AUDIO_RECORDING,
 				R.string.permission_title, R.string.permission_audio_recording_request,
 				new String[]{Manifest.permission.RECORD_AUDIO});
 			return false;
@@ -309,7 +309,7 @@ public class BaseActivity extends AppCompatActivity
 	 */
 	protected boolean checkPermissionNetwork() {
 		if (!PermissionCheck.hasNetwork(this)) {
-			MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_NETWORK,
+			MessageDialogFragmentV4.showDialog(this, REQUEST_PERMISSION_NETWORK,
 				R.string.permission_title, R.string.permission_network_request,
 				new String[]{Manifest.permission.INTERNET});
 			return false;
@@ -324,7 +324,7 @@ public class BaseActivity extends AppCompatActivity
 	 */
 	protected boolean checkPermissionCamera() {
 		if (!PermissionCheck.hasCamera(this)) {
-			MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_CAMERA,
+			MessageDialogFragmentV4.showDialog(this, REQUEST_PERMISSION_CAMERA,
 				R.string.permission_title, R.string.permission_camera_request,
 				new String[]{Manifest.permission.CAMERA});
 			return false;

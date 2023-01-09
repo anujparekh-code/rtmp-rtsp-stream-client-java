@@ -2,33 +2,36 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-  compileSdkVersion 32
+    compileSdkVersion 32
 //  compileSdkVersion versionCompiler
-  buildToolsVersion versionBuildTool
-  defaultConfig {
-    applicationId "com.pedro.rtpstreamer"
-    minSdkVersion 21
-    targetSdkVersion 32
-    versionCode version_code
-    versionName version_name
-  }
-  buildTypes {
-    release {
-      minifyEnabled false
-      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    buildToolsVersion versionBuildTool
+    defaultConfig {
+        applicationId "com.pedro.rtpstreamer"
+        minSdkVersion 21
+        targetSdkVersion 32
+        versionCode version_code
+        versionName version_name
     }
-  }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
 
-  buildFeatures {
-    viewBinding true
-  }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
-  implementation project(':rtplibrary')
-  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-  implementation 'com.google.android.material:material:1.6.0'
-  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-  implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
+    implementation project(':rtplibrary')
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
+//  implementation 'com.github.pedroSG94.rtmp-rtsp-stream-client-java:rtplibrary:1.5.0'
     implementation project(path: ':libuvccamera')
+    implementation project(path: ':usbCameraCommon')
+    implementation("com.serenegiant:common:2.12.4")
 }

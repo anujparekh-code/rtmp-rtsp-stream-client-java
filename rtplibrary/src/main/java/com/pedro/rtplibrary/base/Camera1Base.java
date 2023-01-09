@@ -709,6 +709,7 @@ public abstract class Camera1Base
     }
 
     private void startEncoders() {
+        Log.e("startEncoders ","startEncoders");
         videoEncoder.start();
         if (audioInitialized) audioEncoder.start();
         prepareGlView();

@@ -4,9 +4,12 @@ import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.media.MediaCodec;
 import android.os.Build;
+import android.util.Log;
+import android.view.SurfaceView;
 
 import androidx.annotation.RequiresApi;
 
+import com.pedro.encoder.utils.CodecUtil;
 import com.pedro.rtmp.flv.video.ProfileIop;
 import com.pedro.rtmp.rtmp.RtmpClient;
 import com.pedro.rtmp.utils.ConnectCheckerRtmp;
@@ -33,6 +36,12 @@ public class RtmpUSB extends USBBase {
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public RtmpUSB(OpenGlView openGlView, ConnectCheckerRtmp connectChecker) {
         super(openGlView);
+//        srsFlvMuxer = new SrsFlvMuxer(connectChecker);
+        rtmpClient = new RtmpClient(connectChecker);
+    }
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
+    public RtmpUSB(SurfaceView surfaceView, ConnectCheckerRtmp connectChecker) {
+        super(surfaceView);
 //        srsFlvMuxer = new SrsFlvMuxer(connectChecker);
         rtmpClient = new RtmpClient(connectChecker);
     }
@@ -72,10 +81,13 @@ public class RtmpUSB extends USBBase {
 //        srsFlvMuxer.setIsStereo(isStereo);
 //        srsFlvMuxer.setSampleRate(sampleRate);
         rtmpClient.setAudioInfo(sampleRate, isStereo);
+        Log.e("prepareAudioRtp ","prepareAudioRtp "+isStereo);
+
     }
 
     @Override
     protected void startStreamRtp(String url) {
+
 //        if (videoEncoder.getRotation() == 90 || videoEncoder.getRotation() == 270) {
 //            srsFlvMuxer.setVideoResolution(videoEncoder.getHeight(), videoEncoder.getWidth());
 //        } else {
@@ -87,32 +99,42 @@ public class RtmpUSB extends USBBase {
         } else {
             rtmpClient.setVideoResolution(videoEncoder.getWidth(), videoEncoder.getHeight());
         }
+//        videoEncoder.setType(CodecUtil.H264_MIME);
         rtmpClient.setFps(videoEncoder.getFps());
         rtmpClient.setOnlyVideo(!audioInitialized);
         rtmpClient.connect(url);
+
+        Log.e("startStreamRtp ","startStreamRtp URl "+url);
+
     }
 
     @Override
     protected void stopStreamRtp() {
 //        srsFlvMuxer.stop();
+        Log.e("stopStreamRtp ","stopStreamRtp ");
+
         rtmpClient.disconnect();
     }
 
     @Override
     protected void getAacDataRtp(ByteBuffer aacBuffer, MediaCodec.BufferInfo info) {
 //        srsFlvMuxer.sendAudio(aacBuffer, info);
+        Log.e("getAacDataRtp ","getAacDataRtp "+info.toString());
+
         rtmpClient.sendAudio(aacBuffer, info);
     }
 
     @Override
     protected void onSpsPpsVpsRtp(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
 //        srsFlvMuxer.setSpsPPs(sps, pps);
+        Log.e("onSpsPpsVpsRtp ","onSpsPpsVpsRtp ");
         rtmpClient.setVideoInfo(sps, pps, vps);
     }
 
     @Override
     protected void getH264DataRtp(ByteBuffer h264Buffer, MediaCodec.BufferInfo info) {
 //        srsFlvMuxer.sendVideo(h264Buffer, info);
+        Log.e("getH264DataRtp ","getH264DataRtp --- >  "+info.toString());
         rtmpClient.sendVideo(h264Buffer, info);
     }
 }

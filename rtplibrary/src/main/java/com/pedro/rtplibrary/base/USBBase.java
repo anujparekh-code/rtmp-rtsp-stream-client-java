@@ -2,11 +2,15 @@ package com.pedro.rtplibrary.base;
 
 import android.content.Context;
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
 import android.util.Log;
+import android.view.Surface;
+import android.view.SurfaceView;
 
+import androidx.annotation.LongDef;
 import androidx.annotation.RequiresApi;
 
 import com.pedro.encoder.Frame;
@@ -33,6 +37,7 @@ import com.serenegiant.usb.UVCCamera;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.logging.Logger;
 
 /**
  * Wrapper to stream with camera1 api and microphone. Support stream with SurfaceView, TextureView
@@ -56,6 +61,7 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
     private MicrophoneManager microphoneManager;
     private AudioEncoder audioEncoder;
     private GlInterface glInterface;
+    private SurfaceView surfaceView;
     private boolean streaming = false;
     private boolean videoEnabled = true;
     //record
@@ -70,11 +76,19 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
     protected BaseRecordController recordController;
     private final FpsListener fpsListener = new FpsListener();
     protected boolean audioInitialized = false;
+    private MediaCodec mCodec;
 
     public USBBase(OpenGlView openGlView) {
         context = openGlView.getContext();
         this.glInterface = openGlView;
         this.glInterface.init();
+//        cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context);
+        init();
+    }
+
+    public USBBase(SurfaceView surfaceView) {
+        context = surfaceView.getContext();
+        this.surfaceView = surfaceView;
 //        cameraManager = new Camera1ApiManager(glInterface.getSurfaceTexture(), context);
         init();
     }
@@ -99,8 +113,8 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
 
     private void init() {
         videoEncoder = new VideoEncoder(this);
-//        microphoneManager = new MicrophoneManager(this);
-//        audioEncoder = new AudioEncoder(this);
+        microphoneManager = new MicrophoneManager(this);
+        audioEncoder = new AudioEncoder(this);
         setMicrophoneMode(MicrophoneMode.ASYNC);
 
         recordController = new AndroidMuxerRecordController();
@@ -163,12 +177,16 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
      */
     public boolean prepareVideo(int width, int height, int fps, int bitrate, boolean hardwareRotation,
             int iFrameInterval, int rotation, UVCCamera uvcCamera) {
-        if (onPreview) {
-            stopPreview(uvcCamera);
-            onPreview = true;
-        }
-        return videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, iFrameInterval,
+//        if (onPreview) {
+//            stopPreview(uvcCamera);
+//            onPreview = true;
+//        }
+        boolean prepared = videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, iFrameInterval,
                 FormatVideoEncoder.SURFACE, -1, -1);
+//                FormatVideoEncoder.SURFACE, MediaCodecInfo.CodecProfileLevel.AVCProfileConstrainedBaseline, MediaCodecInfo.CodecProfileLevel.AVCLevel13);
+        Log.e("prepared ", " prepared " + prepared);
+        return  prepared;//videoEncoder.prepareVideoEncoder(width, height, fps, bitrate, rotation, hardwareRotation,
+//                iFrameInterval, FormatVideoEncoder.SURFACE);;
     }
 
     /**
@@ -280,13 +298,19 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
      * @param height of preview in px.
      */
     public void startPreview(final UVCCamera uvcCamera, int width, int height) {
-        if (!isStreaming() && !onPreview && !(glInterface instanceof OffScreenGlThread)) {
-            glInterface.setEncoderSize(width, height);
-            glInterface.setRotation(0);
-            glInterface.start();
-            uvcCamera.setPreviewTexture(glInterface.getSurfaceTexture());
-            uvcCamera.startPreview();
-            onPreview = true;
+        if (!isStreaming() && !onPreview) {
+            if (surfaceView != null) {
+                uvcCamera.setPreviewDisplay(surfaceView.getHolder().getSurface());
+                uvcCamera.startPreview();
+                onPreview = true;
+            } else if (glInterface != null && !(glInterface instanceof OffScreenGlThread)) {
+                glInterface.setEncoderSize(width, height);
+                glInterface.setRotation(0);
+                glInterface.start();
+                uvcCamera.setPreviewTexture(glInterface.getSurfaceTexture());
+                uvcCamera.startPreview();
+                onPreview = true;
+            }
         } else {
             Log.e(TAG, "Streaming or preview started, ignored");
         }
@@ -321,34 +345,51 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
      * @startPreview to resolution seated in @prepareVideo. If you never startPreview this method
      * startPreview for you to resolution seated in @prepareVideo.
      */
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public void startStream(UVCCamera uvcCamera, String url) {
         streaming = true;
+        Log.e("startStream ","startStream isRecording "+recordController.isRecording());
         if (!recordController.isRecording()) {
             startEncoders(uvcCamera);
         } else {
             resetVideoEncoder();
         }
+        requestKeyFrame();
         startStreamRtp(url);
         onPreview = true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void requestKeyFrame() {
+        Log.e("requestKeyframe "," requestKeyframe-- "+videoEncoder.isRunning());
+        if (videoEncoder.isRunning()) {
+            videoEncoder.requestKeyframe();
+        }
+    }
+
     private void startEncoders(UVCCamera uvcCamera) {
+        Log.e("VIDEO>> startEncoders ","startEncoders");
         videoEncoder.start();
         if (audioInitialized) {
             audioEncoder.start();
             microphoneManager.start();
         }
-        uvcCamera.stopPreview();
-        glInterface.stop();
-        glInterface.setEncoderSize(videoEncoder.getWidth(), videoEncoder.getHeight());
-        glInterface.setRotation(0);
-        glInterface.start();
-        uvcCamera.setPreviewTexture(glInterface.getSurfaceTexture());
-        uvcCamera.startPreview();
+//        uvcCamera.stopPreview();
+        if (glInterface != null) {
+            glInterface.stop();
+            glInterface.setEncoderSize(videoEncoder.getWidth(), videoEncoder.getHeight());
+            glInterface.setRotation(0);
+            glInterface.start();
+            uvcCamera.setPreviewTexture(glInterface.getSurfaceTexture());
+        } else if (surfaceView != null) {
+            uvcCamera.setPreviewDisplay(surfaceView.getHolder().getSurface());
+        }
+//        uvcCamera.startPreview();
 
-        if (videoEncoder.getInputSurface() != null) {
+        if (videoEncoder.getInputSurface() != null && glInterface != null) {
             glInterface.addMediaCodecSurface(videoEncoder.getInputSurface());
         }
+
 
         onPreview = true;
     }
@@ -404,6 +445,8 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
                     glInterface.stop();
                     uvcCamera.stopPreview();
                 }
+            } else if (surfaceView != null) {
+//                uvcCamera.stopPreview();
             }
             videoEncoder.stop();
             if (audioInitialized) {
@@ -558,6 +601,7 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
     @Override
     public void onSpsPpsVps(ByteBuffer sps, ByteBuffer pps, ByteBuffer vps) {
 //        if (streaming) onSpsPpsVpsRtp(sps, pps, vps);
+        Log.e("onSpsPpsVps", " onSpsPpsVps -- ");
         onSpsPpsVpsRtp(sps.duplicate(), pps.duplicate(), vps != null ? vps.duplicate() : null);
 
     }
@@ -566,11 +610,13 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
 
     @Override
     public void getVideoData(ByteBuffer h264Buffer, MediaCodec.BufferInfo info) {
+Log.e("VIDEO>> getVideoData","getVideoData");
         fpsListener.calculateFps();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             recordController.recordVideo(h264Buffer, info);
         }
         if (streaming) {
+            Log.e("getVideoData", " getVideoData  " + info);
             getH264DataRtp(h264Buffer, info);
         }
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2 && recordController.isRecording()) {
@@ -594,16 +640,19 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
 //    }
     @Override
     public void inputPCMData(Frame frame) {
+//        Log.e("inputPCMData", " inputPCMData" + frame.getSize());
         audioEncoder.inputPCMData(frame);
     }
 
     @Override
     public void inputYUVData(Frame frame) {
+        Log.e("inputYUVData", " inputYUVData" + frame.getSize());
         videoEncoder.inputYUVData(frame);
     }
 
     @Override
     public void onVideoFormat(MediaFormat mediaFormat) {
+        Log.e(TAG," VIDEO>> onVideoFormat "+mediaFormat);
         videoFormat = mediaFormat;
         recordController.setVideoFormat(mediaFormat, !audioInitialized);
     }
@@ -612,5 +661,9 @@ public abstract class USBBase implements GetAacData, GetCameraData, GetVideoData
     public void onAudioFormat(MediaFormat mediaFormat) {
         audioFormat = mediaFormat;
         recordController.setAudioFormat(mediaFormat);
+    }
+
+    public void setSurface(SurfaceView surface) {
+        this.surfaceView=surface;
     }
 }

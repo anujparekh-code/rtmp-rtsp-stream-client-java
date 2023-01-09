@@ -177,7 +177,7 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
 		len = 34;
 	else
 		len = 26;
-//	LOGI("bcdUVC:%x,req:0x%02x,probe:%d", bcdUVC, req, probe);
+	LOGI("bcdUVC:%x,req:0x%02x,probe:%d", bcdUVC, req, probe);
 	/* prepare for a SET transfer */
 	if (req == UVC_SET_CUR) {
 		SHORT_TO_SW(ctrl->bmHint, buf);
@@ -246,7 +246,7 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
 		ctrl->wDelay = SW_TO_SHORT(buf + 16);
 		ctrl->dwMaxVideoFrameSize = DW_TO_INT(buf + 18);
 		ctrl->dwMaxPayloadTransferSize = DW_TO_INT(buf + 22);
-
+LOGE("LEN IS %d",len);
 		if (len > 26) {	// len == 34
 			// XXX add to support UVC 1.1
 			ctrl->dwClockFrequency = DW_TO_INT(buf + 26);
@@ -264,6 +264,7 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
 				ctrl->bmLayoutPerStream = QW_TO_LONG(buf + 40);
 			}
 		}
+        LOGE("dwMaxVideoFrameSize %d ---> %d",ctrl->dwMaxVideoFrameSize,ctrl->bFrameIndex);
 
 		/* fix up block for cameras that fail to set dwMax */
 		if (!ctrl->dwMaxVideoFrameSize) {
@@ -274,6 +275,7 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
 			if (frame_desc) {
 				ctrl->dwMaxVideoFrameSize = frame_desc->dwMaxVideoFrameBufferSize;
 			}
+            LOGE("fixed  dwMaxVideoFrameSize %d and %d",frame_desc,ctrl->dwMaxVideoFrameSize);
 		}
 	}
 
@@ -360,6 +362,7 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
 
 	DL_FOREACH(devh->info->stream_ifs, stream_if)
 	{
+//        LOGE("format_id %d",format_id);
 		frame = _uvc_find_frame_desc_stream_if(stream_if, format_id, frame_id);
 		if (frame)
 			return frame;
