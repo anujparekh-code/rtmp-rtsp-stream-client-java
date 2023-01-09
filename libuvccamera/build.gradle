@@ -93,7 +93,7 @@ task ndkBuild(type: Exec, description: 'Compile JNI source via NDK') {
 //	commandLine ndkBuildPath, 'clean', '-C', file('src/main').absolutePath
 //}
 
-clean.dependsOn 'ndkClean'
+//clean.dependsOn 'ndkClean'
 afterEvaluate {
 	publishing {
 		publications {
