@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
 /*
  *  UVCCamera
  *  library and sample to access to UVC web camera on non-rooted Android device
@@ -44,6 +46,8 @@ android {
 		packagingOptions {
 			exclude "lib/arm64-v8a/librealm-jni.so"
 		}
+		versionCode version_code
+		versionName version_name
     }
 
     buildTypes {
@@ -90,7 +94,22 @@ task ndkClean(type: Exec, description: 'clean JNI libraries') {
 }
 
 clean.dependsOn 'ndkClean'
+afterEvaluate {
+	publishing {
+		publications {
+			// Creates a Maven publication called "release".
+			release(MavenPublication) {
+				// Applies the component for the release build variant.
+				from components.release
 
+				// You can then customize attributes of the publication as shown below.
+				groupId = "$library_group"
+				artifactId = "libuvccamera"
+				version = "$version_name"
+			}
+		}
+	}
+}
 dependencies {
     implementation fileTree(dir: new File(buildDir, 'libs'), include: '*.jar')
 
