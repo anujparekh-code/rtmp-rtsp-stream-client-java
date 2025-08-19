@@ -25,7 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 android {
-    compileSdkVersion versionCompiler
+    compileSdkVersion 35
    	buildToolsVersion versionBuildTool
 
    	compileOptions {
@@ -34,8 +34,8 @@ android {
    	}
 
     defaultConfig {
-        minSdkVersion 19
-        targetSdkVersion versionTarget
+        minSdkVersion 26
+        targetSdkVersion 35
 		versionCode version_code
 		versionName version_name
     }
@@ -45,6 +45,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+	namespace = 'com.serenegiant.usbcameracommon'
 }
 //afterEvaluate {
 //	publishing {

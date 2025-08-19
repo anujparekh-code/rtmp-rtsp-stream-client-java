@@ -6,7 +6,7 @@ android {
   compileSdkVersion 33
 
   defaultConfig {
-    minSdkVersion 16
+    minSdkVersion 26
     targetSdkVersion 33
     versionCode version_code
     versionName version_name
@@ -17,9 +17,15 @@ android {
       consumerProguardFiles 'proguard-rules.pro'
     }
   }
+  namespace = 'com.pedro.rtplibrary'
+
 
   publishing {
     singleVariant("release")
+  }
+  compileOptions {
+    sourceCompatibility javaTargetCompatibility
+    targetCompatibility javaSourceCompatibility
   }
 }
 

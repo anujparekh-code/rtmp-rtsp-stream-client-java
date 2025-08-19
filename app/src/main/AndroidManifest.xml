@@ -29,6 +29,7 @@
         android:required="false" />
 
     <application
+        android:name=".Rtpstreamer"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
@@ -121,11 +122,6 @@
             android:name=".MainStreamActivity3"
             android:label="@string/rotation_rtmp"
             android:screenOrientation="fullSensor" />
-<activity
-            android:name=".MainActivityKt"
-            android:label="@string/rotation_rtmp"
-            android:screenOrientation="fullSensor" />
-
         <service
             android:name=".rotation.StreamService"
             android:foregroundServiceType="mediaProjection" />

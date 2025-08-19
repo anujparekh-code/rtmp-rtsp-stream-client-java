@@ -160,11 +160,11 @@ public class RtspActivity extends AppCompatActivity
     spResolution = (Spinner) navigationView.getMenu().findItem(R.id.sp_resolution).getActionView();
 
     ArrayAdapter<Integer> orientationAdapter =
-        new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item);
+        new ArrayAdapter<>(this, com.serenegiant.common.R.layout.support_simple_spinner_dropdown_item);
     orientationAdapter.addAll(orientations);
 
     ArrayAdapter<String> resolutionAdapter =
-        new ArrayAdapter<>(this, R.layout.support_simple_spinner_dropdown_item);
+        new ArrayAdapter<>(this, com.serenegiant.common.R.layout.support_simple_spinner_dropdown_item);
     List<String> list = new ArrayList<>();
     for (Camera.Size size : rtspCamera1.getResolutionsBack()) {
       list.add(size.width + "X" + size.height);

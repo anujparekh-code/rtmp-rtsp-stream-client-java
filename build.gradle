@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-  ext.kotlin_version = '1.7.20'
+  ext.kotlin_version = '2.0.0'
   ext.library_group = "com.github.chiragsudani"
   ext.version_code = 222
   ext.version_name = "2.2.2"
@@ -43,11 +43,11 @@ task clean(type: Delete) {
 ext {
     supportLibVersion = '27.1.1'  // variable that can be referenced to keep support libs consistent
     commonLibVersion = '2.12.4'
-    versionBuildTool = '27.0.3'
+    versionBuildTool = '34.0.0'
     versionCompiler = 27
     versionTarget = 27
     versionNameString = '1.0.0'
-    javaSourceCompatibility = JavaVersion.VERSION_1_8
-    javaTargetCompatibility = JavaVersion.VERSION_1_8
+    javaSourceCompatibility = JavaVersion.VERSION_21
+    javaTargetCompatibility = JavaVersion.VERSION_21
 }
 

@@ -27,7 +27,7 @@ apply plugin: 'maven-publish'
 import org.apache.tools.ant.taskdefs.condition.Os
 
 android {
-	compileSdkVersion versionCompiler
+	compileSdkVersion 35
 	buildToolsVersion versionBuildTool
 
 	compileOptions {
@@ -36,8 +36,8 @@ android {
 	}
 
     defaultConfig {
-        minSdkVersion 19
-		targetSdkVersion versionTarget
+        minSdkVersion 26
+		targetSdkVersion 35
 //		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 		ndk {
 			abiFilters "armeabi-v7a", "x86"
@@ -56,6 +56,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+	namespace = 'com.serenegiant.uvccamera'
+
 	sourceSets {
 		main {
 			jniLibs.srcDir 'src/main/libs'
